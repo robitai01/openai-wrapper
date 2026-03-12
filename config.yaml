@@ -1,0 +1,82 @@
+server:
+  host: 0.0.0.0
+  port: 8000
+
+debug:
+  log_final_payload: false
+  log_headers: false
+  truncate_prompt_chars: 500
+
+routing:
+  default_upstream: sglang_qwen3.5_27b
+  path_rules:
+    /v1/embeddings: sglang_qwen3.5_27b
+
+upstreams:
+  ollama_local:
+    base_url: http://host.docker.internal:11434
+    api_key: ""
+    timeout: 120
+    enabled: true
+    models_path: /v1/models
+    headers: {}
+
+  sglang_qwen3.5_27b:
+    base_url: http://192.168.100.7:30003
+    api_key: ""
+    timeout: 120
+    enabled: true
+    models_path: /v1/models
+    headers: {}
+
+# global_chat_overrides:
+  # temperature:
+  #   mode: default
+  #   value: 0.7 
+
+# global_extra_body:
+  # provider:
+  #   cache: true
+
+aliases:
+  qwen3.5-27b-text:
+    upstream: sglang_qwen3.5_27b
+    target_model: Qwen/Qwen3.5-27B-FP8
+    overrides:
+      temperature:
+        value: 1.0
+      top_k:
+        value: 20
+      top_p:
+        value: 1.0
+      min_p:
+        value: 0.0
+      presence_penalty:
+        value: 2.0
+      repetition_penalty:
+        value: 1.0
+    extra_body:
+      chat_template_kwargs:
+        enable_thinking: false
+
+  qwen3.5-27b-code:
+    upstream: sglang_qwen3.5_27b
+    target_model: Qwen/Qwen3.5-27B-FP8
+    overrides:
+      temperature:
+        value: 0.6
+      top_k:
+        value: 20
+      top_p:
+        value: 0.95
+      min_p:
+        value: 0.0
+      presence_penalty:
+        value: 0.0
+      repetition_penalty:
+        value: 1.0
+    extra_body:
+      chat_template_kwargs:
+        enable_thinking: true
+
+models_cache_ttl_seconds: 60
