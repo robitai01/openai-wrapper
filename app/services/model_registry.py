@@ -20,6 +20,10 @@ class ModelRegistry:
         self.config = config
         self._snapshot: ModelsSnapshot | None = None
 
+    def refresh(self, config: AppConfig) -> None:
+        self.config = config
+        self._snapshot = None
+
     async def get_snapshot(self) -> ModelsSnapshot:
         now = time.time()
         if self._snapshot and self._snapshot.expires_at > now:
