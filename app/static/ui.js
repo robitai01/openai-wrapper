@@ -3,7 +3,7 @@ const state = {
   path: '',
   raw: '',
   data: {},
-  meta: { upstreamKinds: [] },
+  meta: {},
 };
 
 const els = {
@@ -38,7 +38,6 @@ const HELP = {
 };
 
 const SELECT_HELP = {
-  upstreamKind: '可选：openai-compatible（通用 OpenAI 兼容接口）、ollama（Ollama 服务）、sglang（SGLang 服务）。目前主要用于界面提示。',
   overrideMode: 'default：仅在用户没传该参数时补默认值；force：强制覆盖用户传值；remove：删除该参数。',
   defaultUpstream: '当模型没命中 alias 或路径规则时，默认转发到这里。',
   targetUpstream: 'alias 命中后，请求会转发到这里。',
@@ -68,7 +67,7 @@ async function loadConfig() {
   state.path = payload.path;
   state.raw = payload.raw;
   state.data = payload.data;
-  state.meta = payload.meta || { upstreamKinds: [] };
+  state.meta = payload.meta || {};
   els.configPath.textContent = payload.path;
   els.rawEditor.value = state.raw;
   render();
@@ -280,7 +279,6 @@ function renderUpstreamsSection() {
     grid.className = 'grid';
     grid.append(
       textField('名称', item.name || '', (v) => { item.name = v; }, 'text', { tooltip: HELP.upstream_name }),
-      selectField('类型', item.kind || 'openai-compatible', state.meta.upstreamKinds || ['openai-compatible'], (v) => { item.kind = v; }, { selectHelp: SELECT_HELP.upstreamKind }),
       textField('Base URL', item.base_url || '', (v) => { item.base_url = v; }, 'text', { tooltip: HELP.base_url }),
       textField('API Key', item.api_key || '', (v) => { item.api_key = v; }, 'text', { tooltip: HELP.api_key }),
       textField('Timeout', item.timeout ?? 120, (v) => { item.timeout = Number(v || 0); }, 'number', { tooltip: HELP.timeout }),
@@ -295,7 +293,7 @@ function renderUpstreamsSection() {
   const addBtn = document.createElement('button');
   addBtn.textContent = '新增 upstream';
   addBtn.onclick = () => {
-    list.push({ name: '', kind: 'openai-compatible', base_url: '', api_key: '', timeout: 120, enabled: true, models_path: '/v1/models', headers: {} });
+    list.push({ name: '', base_url: '', api_key: '', timeout: 120, enabled: true, models_path: '/v1/models', headers: {} });
     render();
   };
   section.appendChild(addBtn);

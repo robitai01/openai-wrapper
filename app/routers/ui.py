@@ -20,7 +20,6 @@ router = APIRouter()
 BASE_DIR = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 CONFIG_PATH = DEFAULT_CONFIG_PATH
-SUPPORTED_UPSTREAM_KINDS = ["openai-compatible", "ollama", "sglang"]
 
 
 class ConfigSaveRequest(BaseModel):
@@ -92,9 +91,7 @@ def build_payload_from_disk() -> dict[str, Any]:
         path=str(CONFIG_PATH),
         raw=raw,
         data=form_data,
-        meta={
-            "upstreamKinds": SUPPORTED_UPSTREAM_KINDS,
-        },
+        meta={},
     ).model_dump()
 
 
@@ -103,7 +100,6 @@ def normalize_for_form(data: dict[str, Any]) -> dict[str, Any]:
     for name, value in (data.get("upstreams") or {}).items():
         item = dict(value or {})
         item["name"] = name
-        item.setdefault("kind", infer_upstream_kind(item))
         upstreams.append(item)
 
     aliases = []
@@ -122,15 +118,6 @@ def normalize_for_form(data: dict[str, Any]) -> dict[str, Any]:
         "aliases": aliases,
         "models_cache_ttl_seconds": data.get("models_cache_ttl_seconds", 60),
     }
-
-
-def infer_upstream_kind(item: dict[str, Any]) -> str:
-    base_url = str(item.get("base_url", ""))
-    if "11434" in base_url or "ollama" in base_url.lower():
-        return "ollama"
-    if "sglang" in base_url.lower():
-        return "sglang"
-    return "openai-compatible"
 
 
 def merge_form_data(original: dict[str, Any], form: dict[str, Any]) -> dict[str, Any]:
