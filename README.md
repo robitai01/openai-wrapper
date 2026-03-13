@@ -42,7 +42,7 @@ docker compose up --build -d
 docker run -d \
   -p 8000:8000 \
   -v $(pwd)/config.yaml:/app/config.yaml \
-  robitai01/openai-wrapper:latest
+  robitai/openai-wrapper:latest
 ```
 
 ## 配置
