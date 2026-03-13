@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.config import load_config
 from app.routers.chat import router as chat_router
 from app.routers.models import router as models_router
 from app.routers.proxy import router as proxy_router
@@ -20,3 +22,13 @@ app.include_router(proxy_router)
 @app.get("/health")
 async def health():
     return JSONResponse({"status": "ok"})
+
+
+if __name__ == "__main__":
+    config = load_config()
+    uvicorn.run(
+        "app.main:app",
+        host=config.server.host,
+        port=config.server.port,
+        reload=False,
+    )

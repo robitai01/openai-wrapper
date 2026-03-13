@@ -21,8 +21,13 @@
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+python -m app.main
 ```
+
+说明：
+- `python -m app.main` 会读取 `config.yaml` 中的 `server.host` 和 `server.port`
+- 如果你改用 `uvicorn app.main:app` 直接启动，那 host/port 仍由 uvicorn 命令行参数决定，不会自动读取配置文件
+- 仓库内提供 `config.example.yaml` 作为示例，请先复制为本地 `config.yaml` 再修改
 
 ### Docker
 
@@ -32,7 +37,13 @@ docker compose up --build -d
 
 ## 配置
 
-编辑 `config.yaml`：
+先复制一份本地配置：
+
+```bash
+cp config.example.yaml config.yaml
+```
+
+然后编辑 `config.yaml`：
 
 - `upstreams`: 定义 ollama / sglang 等上游
 - `routing`: 默认上游与路径路由规则

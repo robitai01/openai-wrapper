@@ -18,6 +18,33 @@ const els = {
   saveBtn: document.getElementById('save-btn'),
 };
 
+const HELP = {
+  host: '服务监听地址。开发时一般用 0.0.0.0，表示允许局域网或容器访问。',
+  port: '服务监听端口。默认 8000。',
+  ttl: '模型列表缓存时长，单位秒。值越大，请求 /v1/models 越少。',
+  truncate_prompt_chars: '调试日志里 prompt 的截断长度，避免日志太长。',
+  base_url: '上游模型服务地址，例如 http://host.docker.internal:11434 或 http://127.0.0.1:30003',
+  api_key: '如果上游需要鉴权就在这里填，不需要可留空。',
+  timeout: '请求该 upstream 的超时时间，单位秒。',
+  models_path: '用于拉取模型列表的接口路径，通常是 /v1/models。',
+  headers: '额外请求头，填 JSON 对象。适合放固定鉴权头或特殊上游要求的 header。',
+  upstream_name: 'upstream 的唯一名字，routing 和 alias 都会引用它。',
+  alias_name: '对外暴露给客户端的模型别名。客户端请求这个名字时会映射到 target model。',
+  target_model: '实际转发给上游的模型名，例如 Qwen/Qwen3.5-27B-FP8。',
+  path_rule: '把特定 API 路径定向到某个 upstream，例如 /v1/embeddings。',
+  override_key: '要覆盖的参数名，例如 temperature、top_p、top_k。',
+  override_value: 'override 的值。支持数字、true/false、null、字符串。',
+  extra_body: '附加到请求体中的额外字段，填 JSON 对象。适合 provider 专属参数。',
+};
+
+const SELECT_HELP = {
+  upstreamKind: '可选：openai-compatible（通用 OpenAI 兼容接口）、ollama（Ollama 服务）、sglang（SGLang 服务）。目前主要用于界面提示。',
+  overrideMode: 'default：仅在用户没传该参数时补默认值；force：强制覆盖用户传值；remove：删除该参数。',
+  defaultUpstream: '当模型没命中 alias 或路径规则时，默认转发到这里。',
+  targetUpstream: 'alias 命中后，请求会转发到这里。',
+  routeUpstream: '这条 path rule 命中后，请求会转发到这里。',
+};
+
 function setStatus(message, type = 'ok') {
   els.status.textContent = message;
   els.status.className = `status ${type}`;
@@ -56,37 +83,62 @@ function render() {
   if (state.mode === 'form') renderFormMode();
 }
 
-function textField(label, value, oninput, type = 'text') {
+function createLabel(label, tooltip = '') {
+  const row = document.createElement('div');
+  row.className = 'label-row';
+  const text = document.createElement('label');
+  text.textContent = label;
+  row.appendChild(text);
+  if (tooltip) {
+    const icon = document.createElement('span');
+    icon.className = 'help-icon';
+    icon.textContent = 'i';
+    icon.setAttribute('data-tooltip', tooltip);
+    row.appendChild(icon);
+  }
+  return row;
+}
+
+function textField(label, value, oninput, type = 'text', options = {}) {
   const div = document.createElement('div');
   div.className = 'field';
-  const lab = document.createElement('label');
-  lab.textContent = label;
+  div.appendChild(createLabel(label, options.tooltip || ''));
   const input = document.createElement('input');
   input.type = type;
   input.value = value ?? '';
   input.oninput = (e) => oninput(e.target.value);
-  div.append(lab, input);
+  div.appendChild(input);
+  if (options.helpText) {
+    const small = document.createElement('div');
+    small.className = 'muted small';
+    small.textContent = options.helpText;
+    div.appendChild(small);
+  }
   return div;
 }
 
-function checkboxField(label, checked, oninput) {
+function checkboxField(label, checked, oninput, options = {}) {
   const div = document.createElement('div');
   div.className = 'field';
-  const lab = document.createElement('label');
-  lab.textContent = label;
+  div.appendChild(createLabel(label, options.tooltip || ''));
   const input = document.createElement('input');
   input.type = 'checkbox';
   input.checked = !!checked;
   input.onchange = (e) => oninput(e.target.checked);
-  div.append(lab, input);
+  div.appendChild(input);
+  if (options.helpText) {
+    const small = document.createElement('div');
+    small.className = 'muted small';
+    small.textContent = options.helpText;
+    div.appendChild(small);
+  }
   return div;
 }
 
-function selectField(label, value, options, oninput) {
+function selectField(label, value, options, oninput, config = {}) {
   const div = document.createElement('div');
   div.className = 'field';
-  const lab = document.createElement('label');
-  lab.textContent = label;
+  div.appendChild(createLabel(label, config.tooltip || ''));
   const select = document.createElement('select');
   options.forEach((optionValue) => {
     const option = document.createElement('option');
@@ -96,25 +148,29 @@ function selectField(label, value, options, oninput) {
     select.appendChild(option);
   });
   select.onchange = (e) => oninput(e.target.value);
-  div.append(lab, select);
+  div.appendChild(select);
+  if (config.selectHelp) {
+    const help = document.createElement('div');
+    help.className = 'select-help';
+    help.textContent = config.selectHelp;
+    div.appendChild(help);
+  }
   return div;
 }
 
-function textareaField(label, value, oninput, helpText = '') {
+function textareaField(label, value, oninput, helpText = '', tooltip = '') {
   const div = document.createElement('div');
   div.className = 'field';
-  const lab = document.createElement('label');
-  lab.textContent = label;
-  const ta = document.createElement('textarea');
-  ta.value = value ?? '';
-  ta.oninput = (e) => oninput(e.target.value);
-  div.appendChild(lab);
+  div.appendChild(createLabel(label, tooltip));
   if (helpText) {
     const small = document.createElement('div');
     small.className = 'muted small';
     small.textContent = helpText;
     div.appendChild(small);
   }
+  const ta = document.createElement('textarea');
+  ta.value = value ?? '';
+  ta.oninput = (e) => oninput(e.target.value);
   div.appendChild(ta);
   return div;
 }
@@ -190,10 +246,10 @@ function renderBasicSection() {
   const server = state.data.server || {};
   const debug = state.data.debug || {};
   grid.append(
-    textField('Host', server.host || '', (v) => { server.host = v; }),
-    textField('Port', server.port ?? 8000, (v) => { server.port = Number(v || 0); }, 'number'),
-    textField('模型缓存 TTL（秒）', state.data.models_cache_ttl_seconds ?? 60, (v) => { state.data.models_cache_ttl_seconds = Number(v || 0); }, 'number'),
-    textField('截断日志字符数', debug.truncate_prompt_chars ?? 500, (v) => { debug.truncate_prompt_chars = Number(v || 0); }, 'number'),
+    textField('Host', server.host || '', (v) => { server.host = v; }, 'text', { tooltip: HELP.host }),
+    textField('Port', server.port ?? 8000, (v) => { server.port = Number(v || 0); }, 'number', { tooltip: HELP.port }),
+    textField('模型缓存 TTL（秒）', state.data.models_cache_ttl_seconds ?? 60, (v) => { state.data.models_cache_ttl_seconds = Number(v || 0); }, 'number', { tooltip: HELP.ttl }),
+    textField('截断日志字符数', debug.truncate_prompt_chars ?? 500, (v) => { debug.truncate_prompt_chars = Number(v || 0); }, 'number', { tooltip: HELP.truncate_prompt_chars }),
     checkboxField('打印最终 payload', debug.log_final_payload, (v) => { debug.log_final_payload = v; }),
     checkboxField('打印 headers', debug.log_headers, (v) => { debug.log_headers = v; }),
   );
@@ -206,7 +262,6 @@ function renderBasicSection() {
 function renderUpstreamsSection() {
   const section = wrapSection('Upstreams');
   const list = state.data.upstreams || (state.data.upstreams = []);
-  const upstreamOptions = [''].concat(list.map((item) => item.name || ''));
 
   list.forEach((item, index) => {
     const card = document.createElement('div');
@@ -224,14 +279,14 @@ function renderUpstreamsSection() {
     const grid = document.createElement('div');
     grid.className = 'grid';
     grid.append(
-      textField('名称', item.name || '', (v) => { item.name = v; render(); }),
-      selectField('类型', item.kind || 'openai-compatible', state.meta.upstreamKinds || ['openai-compatible'], (v) => { item.kind = v; }),
-      textField('Base URL', item.base_url || '', (v) => { item.base_url = v; }),
-      textField('API Key', item.api_key || '', (v) => { item.api_key = v; }),
-      textField('Timeout', item.timeout ?? 120, (v) => { item.timeout = Number(v || 0); }, 'number'),
-      textField('Models Path', item.models_path || '/v1/models', (v) => { item.models_path = v; }),
+      textField('名称', item.name || '', (v) => { item.name = v; render(); }, 'text', { tooltip: HELP.upstream_name }),
+      selectField('类型', item.kind || 'openai-compatible', state.meta.upstreamKinds || ['openai-compatible'], (v) => { item.kind = v; }, { selectHelp: SELECT_HELP.upstreamKind }),
+      textField('Base URL', item.base_url || '', (v) => { item.base_url = v; }, 'text', { tooltip: HELP.base_url }),
+      textField('API Key', item.api_key || '', (v) => { item.api_key = v; }, 'text', { tooltip: HELP.api_key }),
+      textField('Timeout', item.timeout ?? 120, (v) => { item.timeout = Number(v || 0); }, 'number', { tooltip: HELP.timeout }),
+      textField('Models Path', item.models_path || '/v1/models', (v) => { item.models_path = v; }, 'text', { tooltip: HELP.models_path }),
       checkboxField('启用', item.enabled !== false, (v) => { item.enabled = v; }),
-      textareaField('Headers(JSON)', jsonText(item.headers || {}), (v) => { item.headers = safeJsonParse(v, {}); }, '这里填 JSON 对象，比如 {"Authorization":"Bearer xxx"}'),
+      textareaField('Headers(JSON)', jsonText(item.headers || {}), (v) => { item.headers = safeJsonParse(v, {}); }, '这里填 JSON 对象，比如 {"Authorization":"Bearer xxx"}', HELP.headers),
     );
     card.appendChild(grid);
     section.appendChild(card);
@@ -253,7 +308,7 @@ function renderRoutingSection() {
   const upstreamNames = [''].concat((state.data.upstreams || []).map((item) => item.name || '').filter(Boolean));
   const grid = document.createElement('div');
   grid.className = 'grid';
-  grid.append(selectField('默认 Upstream', routing.default_upstream || '', upstreamNames, (v) => { routing.default_upstream = v; }));
+  grid.append(selectField('默认 Upstream', routing.default_upstream || '', upstreamNames, (v) => { routing.default_upstream = v; }, { selectHelp: SELECT_HELP.defaultUpstream }));
   section.appendChild(grid);
 
   const rules = Object.entries(routing.path_rules || {});
@@ -261,16 +316,19 @@ function renderRoutingSection() {
     const card = document.createElement('div');
     card.className = 'card';
     const nextRules = Object.entries(routing.path_rules || {});
-    card.append(
+    const ruleGrid = document.createElement('div');
+    ruleGrid.className = 'grid';
+    ruleGrid.append(
       textField('Path', path, (v) => {
         nextRules[index][0] = v;
         routing.path_rules = Object.fromEntries(nextRules.filter(([p, u]) => p && u));
-      }),
+      }, 'text', { tooltip: HELP.path_rule }),
       selectField('Upstream', upstream, upstreamNames, (v) => {
         nextRules[index][1] = v;
         routing.path_rules = Object.fromEntries(nextRules.filter(([p, u]) => p && u));
-      })
+      }, { selectHelp: SELECT_HELP.routeUpstream })
     );
+    card.appendChild(ruleGrid);
     const del = document.createElement('button');
     del.className = 'danger';
     del.textContent = '删除规则';
@@ -316,15 +374,15 @@ function renderOverridesSection() {
       textField('参数名', entry.key || '', (v) => {
         overrideEntries[index].key = v;
         state.data.global_chat_overrides = denormalizeOverrideEntries(overrideEntries);
-      }),
+      }, 'text', { tooltip: HELP.override_key }),
       selectField('Mode', entry.mode || 'default', ['default', 'force', 'remove'], (v) => {
         overrideEntries[index].mode = v;
         state.data.global_chat_overrides = denormalizeOverrideEntries(overrideEntries);
-      }),
+      }, { selectHelp: SELECT_HELP.overrideMode }),
       textField('Value', entry.value ?? '', (v) => {
         overrideEntries[index].value = v;
         state.data.global_chat_overrides = denormalizeOverrideEntries(overrideEntries);
-      })
+      }, 'text', { tooltip: HELP.override_value, helpText: '支持 number / true / false / null / string' })
     );
     card.appendChild(grid);
     const del = document.createElement('button');
@@ -355,7 +413,7 @@ function renderOverridesSection() {
   extraTitle.textContent = 'global_extra_body';
   extraBodyWrap.appendChild(extraTitle);
   extraBodyWrap.appendChild(
-    textareaField('Extra Body (JSON)', jsonText(state.data.global_extra_body || {}), (v) => { state.data.global_extra_body = safeJsonParse(v, {}); })
+    textareaField('Extra Body (JSON)', jsonText(state.data.global_extra_body || {}), (v) => { state.data.global_extra_body = safeJsonParse(v, {}); }, '填 JSON 对象，例如 {"provider":{"cache":true}}', HELP.extra_body)
   );
 
   section.append(overridesWrap, extraBodyWrap);
@@ -383,9 +441,9 @@ function renderAliasesSection() {
     const baseGrid = document.createElement('div');
     baseGrid.className = 'grid';
     baseGrid.append(
-      textField('Alias 名', item.name || '', (v) => { item.name = v; render(); }),
-      selectField('目标 Upstream', item.upstream || '', upstreamNames, (v) => { item.upstream = v; }),
-      textField('Target Model', item.target_model || '', (v) => { item.target_model = v; }),
+      textField('Alias 名', item.name || '', (v) => { item.name = v; render(); }, 'text', { tooltip: HELP.alias_name }),
+      selectField('目标 Upstream', item.upstream || '', upstreamNames, (v) => { item.upstream = v; }, { selectHelp: SELECT_HELP.targetUpstream }),
+      textField('Target Model', item.target_model || '', (v) => { item.target_model = v; }, 'text', { tooltip: HELP.target_model }),
     );
     card.appendChild(baseGrid);
 
@@ -406,15 +464,15 @@ function renderAliasesSection() {
         textField('参数名', entry.key || '', (v) => {
           overrideEntries[overrideIndex].key = v;
           item.overrides = denormalizeOverrideEntries(overrideEntries);
-        }),
+        }, 'text', { tooltip: HELP.override_key }),
         selectField('Mode', entry.mode || 'default', ['default', 'force', 'remove'], (v) => {
           overrideEntries[overrideIndex].mode = v;
           item.overrides = denormalizeOverrideEntries(overrideEntries);
-        }),
+        }, { selectHelp: SELECT_HELP.overrideMode }),
         textField('Value', entry.value ?? '', (v) => {
           overrideEntries[overrideIndex].value = v;
           item.overrides = denormalizeOverrideEntries(overrideEntries);
-        })
+        }, 'text', { tooltip: HELP.override_value, helpText: '支持 number / true / false / null / string' })
       );
       overrideCard.appendChild(overrideGrid);
       const delOverride = document.createElement('button');
@@ -446,7 +504,7 @@ function renderAliasesSection() {
     extraBodyTitle.textContent = 'Extra Body';
     extraBodySection.appendChild(extraBodyTitle);
     extraBodySection.appendChild(
-      textareaField('Extra Body (JSON)', jsonText(item.extra_body || {}), (v) => { item.extra_body = safeJsonParse(v, {}); })
+      textareaField('Extra Body (JSON)', jsonText(item.extra_body || {}), (v) => { item.extra_body = safeJsonParse(v, {}); }, '填 JSON 对象，适合 provider 专属参数', HELP.extra_body)
     );
     card.appendChild(extraBodySection);
 

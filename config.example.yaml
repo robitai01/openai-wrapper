@@ -30,13 +30,13 @@ upstreams:
     headers: {}
 
 # global_chat_overrides:
-  # temperature:
-  #   mode: default
-  #   value: 0.7 
+#   temperature:
+#     mode: default
+#     value: 0.7
 
 # global_extra_body:
-  # provider:
-  #   cache: true
+#   provider:
+#     cache: true
 
 aliases:
   qwen3.5-27b-text:
