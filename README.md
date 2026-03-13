@@ -45,6 +45,49 @@ docker run -d \
   robitai/openai-wrapper:latest
 ```
 
+## WebUI
+
+项目内置了一个简单的配置管理 WebUI，用来查看和编辑当前的 `config.yaml`，不需要额外安装前端项目。
+
+### 访问地址
+
+服务启动后，直接打开：
+
+- `http://127.0.0.1:8000/ui`
+- 如果你改了 `config.yaml` 里的 `server.port`，把上面的 `8000` 换成对应端口
+
+### WebUI 能做什么
+
+- 查看当前加载的配置文件路径
+- 以表单模式编辑 `server / routing / upstreams / aliases` 等配置
+- 切换到 Raw YAML 模式直接编辑原始配置
+- 保存后立即刷新运行时配置，无需手动重启进程
+
+### 使用方式
+
+1. 先按上面的“本地运行”或 “Docker” 启动服务
+2. 确保项目根目录下已经有 `config.yaml`
+3. 浏览器打开 `/ui`
+4. 在表单模式或 Raw YAML 模式下修改配置并保存
+
+### Docker 下使用 WebUI
+
+如果你用的是仓库里的 `docker-compose.yml`，启动后同样访问：
+
+- `http://127.0.0.1:8000/ui`
+
+注意：compose 默认把宿主机的 `./config.yaml` 挂载到容器内 `/app/config.yaml`，所以你在 WebUI 里保存的其实就是宿主机这份配置文件。
+
+### 注意事项
+
+- WebUI 当前主要用于配置管理，不是聊天测试界面
+- WebUI 依赖项目后端服务本身，没有单独的前端 dev server
+- 如果打开 `/ui` 报配置文件不存在，请先执行：
+
+```bash
+cp config.example.yaml config.yaml
+```
+
 ## 配置
 
 先复制一份本地配置：
