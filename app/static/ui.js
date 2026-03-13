@@ -279,7 +279,7 @@ function renderUpstreamsSection() {
     const grid = document.createElement('div');
     grid.className = 'grid';
     grid.append(
-      textField('名称', item.name || '', (v) => { item.name = v; render(); }, 'text', { tooltip: HELP.upstream_name }),
+      textField('名称', item.name || '', (v) => { item.name = v; }, 'text', { tooltip: HELP.upstream_name }),
       selectField('类型', item.kind || 'openai-compatible', state.meta.upstreamKinds || ['openai-compatible'], (v) => { item.kind = v; }, { selectHelp: SELECT_HELP.upstreamKind }),
       textField('Base URL', item.base_url || '', (v) => { item.base_url = v; }, 'text', { tooltip: HELP.base_url }),
       textField('API Key', item.api_key || '', (v) => { item.api_key = v; }, 'text', { tooltip: HELP.api_key }),
@@ -441,7 +441,7 @@ function renderAliasesSection() {
     const baseGrid = document.createElement('div');
     baseGrid.className = 'grid';
     baseGrid.append(
-      textField('Alias 名', item.name || '', (v) => { item.name = v; render(); }, 'text', { tooltip: HELP.alias_name }),
+      textField('Alias 名', item.name || '', (v) => { item.name = v; }, 'text', { tooltip: HELP.alias_name }),
       selectField('目标 Upstream', item.upstream || '', upstreamNames, (v) => { item.upstream = v; }, { selectHelp: SELECT_HELP.targetUpstream }),
       textField('Target Model', item.target_model || '', (v) => { item.target_model = v; }, 'text', { tooltip: HELP.target_model }),
     );
