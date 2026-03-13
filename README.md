@@ -1,21 +1,21 @@
 # OpenAI Wrapper
 
-一个基于 FastAPI 的 OpenAI 兼容代理层，面向本地部署的 Ollama / sglang。
+An OpenAI-compatible proxy built with FastAPI for locally deployed Ollama / sglang backends.
 
-## 功能
+## Features
 
-- 完整支持 `/v1/chat/completions`
-- 支持流式与非流式转发
-- 支持参数覆盖（default / force / remove）
-- 支持 `extra_body` 注入，且**用户字段优先**
-- 支持 `/v1/models` 聚合多个上游模型列表
-- 支持模型 alias
-- 其余 `/v1/*` 接口默认透传
-- 支持 Docker 部署
+- Full support for `/v1/chat/completions`
+- Supports both streaming and non-streaming forwarding
+- Supports parameter overrides (`default` / `force` / `remove`)
+- Supports `extra_body` injection with **user-provided fields taking precedence**
+- Supports aggregating model lists from multiple upstreams via `/v1/models`
+- Supports model aliases
+- Passes through other `/v1/*` endpoints by default
+- Supports Docker deployment
 
-## 快速开始
+## Quick Start
 
-### 本地运行
+### Run Locally
 
 ```bash
 python -m venv .venv
@@ -24,11 +24,11 @@ pip install -r requirements.txt
 python -m app.main
 ```
 
-说明：
-- `python -m app.main` 会读取 `config.yaml` 中的 `server.host` 和 `server.port`
-- 如果你改用 `uvicorn app.main:app` 直接启动，那 host/port 仍由 uvicorn 命令行参数决定，不会自动读取配置文件
-- 仓库内提供 `config.example.yaml` 作为示例，请先复制为本地 `config.yaml` 再修改
-- Docker 镜像构建时会内置 `config.example.yaml`；生产部署时建议通过挂载提供你自己的 `/app/config.yaml`
+Notes:
+- `python -m app.main` reads `server.host` and `server.port` from `config.yaml`
+- If you start it with `uvicorn app.main:app`, host/port are controlled by the uvicorn CLI arguments instead of the config file
+- The repository includes `config.example.yaml` as a sample. Copy it to `config.yaml` before editing
+- The Docker image includes `config.example.yaml`; for production deployments, it is recommended to mount your own `/app/config.yaml`
 
 ### Docker
 
@@ -36,7 +36,7 @@ python -m app.main
 docker compose up --build -d
 ```
 
-如果你直接运行容器，建议把宿主机配置文件挂载到容器内：
+If you run the container directly, it is recommended to mount the config file from the host:
 
 ```bash
 docker run -d \
@@ -47,83 +47,88 @@ docker run -d \
 
 ## WebUI
 
-项目内置了一个简单的配置管理 WebUI，用来查看和编辑当前的 `config.yaml`，不需要额外安装前端项目。
+The project includes a built-in WebUI for viewing and editing `config.yaml`. No separate frontend project is required.
 
-### 访问地址
+### Access URL
 
-服务启动后，直接打开：
-
-- `http://127.0.0.1:8000/ui`
-- 如果你改了 `config.yaml` 里的 `server.port`，把上面的 `8000` 换成对应端口
-
-### WebUI 能做什么
-
-- 查看当前加载的配置文件路径
-- 以表单模式编辑 `server / routing / upstreams / aliases` 等配置
-- 切换到 Raw YAML 模式直接编辑原始配置
-- 保存后立即刷新运行时配置，无需手动重启进程
-
-### 使用方式
-
-1. 先按上面的“本地运行”或 “Docker” 启动服务
-2. 确保项目根目录下已经有 `config.yaml`
-3. 浏览器打开 `/ui`
-4. 在表单模式或 Raw YAML 模式下修改配置并保存
-
-### Docker 下使用 WebUI
-
-如果你用的是仓库里的 `docker-compose.yml`，启动后同样访问：
+After the service starts, open:
 
 - `http://127.0.0.1:8000/ui`
+- If you changed `server.port` in `config.yaml`, replace `8000` with your configured port
 
-注意：compose 默认把宿主机的 `./config.yaml` 挂载到容器内 `/app/config.yaml`，所以你在 WebUI 里保存的其实就是宿主机这份配置文件。
+### What the WebUI Can Do
 
-### 注意事项
+- Show the path of the currently loaded config file
+- Edit `server / routing / upstreams / aliases` and other settings in form mode
+- Switch to Raw YAML mode to edit the config directly
+- Save changes and refresh the runtime config immediately without manually restarting the process
 
-- WebUI 当前主要用于配置管理，不是聊天测试界面
-- WebUI 依赖项目后端服务本身，没有单独的前端 dev server
-- 如果打开 `/ui` 报配置文件不存在，请先执行：
+### How to Use It
+
+1. Start the service using either the local or Docker method above
+2. Make sure `config.yaml` exists in the project root
+3. Open `/ui` in your browser
+4. Edit the configuration in either form mode or Raw YAML mode, then save
+
+### Using the WebUI with Docker
+
+If you use the repository's `docker-compose.yml`, the WebUI is available at:
+
+- `http://127.0.0.1:8000/ui`
+
+Note: the compose file mounts the host's `./config.yaml` into the container as `/app/config.yaml`, so saving changes in the WebUI updates the host-side config file.
+
+### Notes
+
+- The current WebUI is intended for configuration management, not as a chat playground
+- The WebUI is served by the backend itself; there is no separate frontend dev server
+- If `/ui` reports that the config file does not exist, run:
 
 ```bash
 cp config.example.yaml config.yaml
 ```
 
-## 配置
+## Configuration
 
-先复制一份本地配置：
+First, create a local config file:
 
 ```bash
 cp config.example.yaml config.yaml
 ```
 
-然后编辑 `config.yaml`：
+Then edit `config.yaml`:
 
-- `upstreams`: 定义 ollama / sglang 等上游
-- `routing`: 默认上游与路径路由规则
-- `global_chat_overrides`: 全局 chat 参数覆盖
-- `global_extra_body`: 全局额外字段
-- `aliases`: 模型别名及专属覆盖规则
+- `upstreams`: defines upstream backends such as Ollama / sglang
+- `routing`: default upstream and path-based routing rules
+- `global_chat_overrides`: global chat parameter overrides
+- `global_extra_body`: global extra fields
+- `aliases`: model aliases and alias-specific override rules
 
-## 行为说明
+## Behavior
 
 ### chat/completions
 
-1. 命中 alias 时，先映射到目标模型和目标上游
-2. 应用 alias overrides
-3. 合并 alias extra_body（用户字段优先）
-4. 应用 global overrides
-5. 合并 global extra_body（用户字段优先）
-6. 转发到上游
+1. If an alias matches, map it to the target model and target upstream first
+2. Apply alias overrides
+3. Merge alias `extra_body` (user-provided fields take precedence)
+4. Apply global overrides
+5. Merge global `extra_body` (user-provided fields take precedence)
+6. Forward the request to the upstream
 
 ### models
 
-- 聚合所有启用上游的 `/v1/models`
-- 去重
-- 追加 alias 作为 wrapper 自己暴露的模型名
-- 默认缓存 60 秒
+- Aggregates `/v1/models` from all enabled upstreams
+- Deduplicates model entries
+- Appends aliases as model names exposed by the wrapper itself
+- Uses a default cache TTL of 60 seconds
 
-## 注意
+## Notes
 
-- Docker 中访问宿主机服务默认使用 `host.docker.internal`
-- Linux 下已在 compose 中加入 `host-gateway`
-- 如果上游不需要 API Key，可留空
+- Inside Docker, access to host services usually uses `host.docker.internal`
+- On Linux, `host-gateway` is already included in the compose file
+- If an upstream does not require an API key, you can leave it empty
+
+## Language Versions
+
+- English: `README.md`
+- Chinese: `README_zh.md`
