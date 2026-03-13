@@ -28,11 +28,21 @@ python -m app.main
 - `python -m app.main` 会读取 `config.yaml` 中的 `server.host` 和 `server.port`
 - 如果你改用 `uvicorn app.main:app` 直接启动，那 host/port 仍由 uvicorn 命令行参数决定，不会自动读取配置文件
 - 仓库内提供 `config.example.yaml` 作为示例，请先复制为本地 `config.yaml` 再修改
+- Docker 镜像构建时会内置 `config.example.yaml`；生产部署时建议通过挂载提供你自己的 `/app/config.yaml`
 
 ### Docker
 
 ```bash
 docker compose up --build -d
+```
+
+如果你直接运行容器，建议把宿主机配置文件挂载到容器内：
+
+```bash
+docker run -d \
+  -p 8000:8000 \
+  -v $(pwd)/config.yaml:/app/config.yaml \
+  robitai01/openai-wrapper:latest
 ```
 
 ## 配置

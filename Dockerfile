@@ -6,7 +6,8 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
-COPY config.yaml ./config.yaml
+COPY config.example.yaml ./config.example.yaml
+COPY config.example.yaml ./config.yaml
 
 EXPOSE 8000
 
