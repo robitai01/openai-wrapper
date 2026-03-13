@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import errno
 import json
 import os
 from pathlib import Path
@@ -222,7 +223,16 @@ def save_config_dict(data: dict[str, Any]) -> None:
 def save_config_raw(raw: str) -> None:
     tmp_path = CONFIG_PATH.with_suffix(CONFIG_PATH.suffix + ".tmp")
     tmp_path.write_text(raw, encoding="utf-8")
-    os.replace(tmp_path, CONFIG_PATH)
+    try:
+        os.replace(tmp_path, CONFIG_PATH)
+    except OSError as exc:
+        if exc.errno not in {errno.EBUSY, errno.EXDEV, errno.EPERM, errno.EACCES}:
+            raise
+        CONFIG_PATH.write_text(raw, encoding="utf-8")
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except Exception:
+            pass
     refresh_runtime_config()
 
 
