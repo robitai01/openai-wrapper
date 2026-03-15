@@ -126,9 +126,56 @@ textarea {
   display: flex;
   gap: 8px;
   margin-top: 10px;
+  flex-wrap: wrap;
 }
 .small { font-size: 12px; }
 #raw-editor { min-height: 68vh; }
+.test-result {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+.test-result.ok {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+.test-result.error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: var(--danger);
+}
+.table-wrap {
+  overflow-x: auto;
+  margin-top: 10px;
+}
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+.preview-table th,
+.preview-table td {
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+.preview-table th {
+  background: #f8fafc;
+}
+.raw-preview {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #0f172a;
+  color: #e5e7eb;
+  overflow-x: auto;
+}
 .label-row {
   display: flex;
   align-items: center;

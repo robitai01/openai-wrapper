@@ -4,6 +4,8 @@ const state = {
   raw: '',
   data: {},
   meta: {},
+  upstreamTests: {},
+  preview: null,
 };
 
 const els = {
@@ -61,6 +63,12 @@ async function requestJson(url, options = {}) {
   return data;
 }
 
+function formPayload() {
+  return state.mode === 'raw'
+    ? { mode: 'raw', raw: els.rawEditor.value }
+    : { mode: 'form', data: state.data };
+}
+
 async function loadConfig() {
   setStatus('正在加载配置...', 'ok');
   const payload = await requestJson('/api/ui/config');
@@ -68,6 +76,8 @@ async function loadConfig() {
   state.raw = payload.raw;
   state.data = payload.data;
   state.meta = payload.meta || {};
+  state.upstreamTests = {};
+  state.preview = null;
   els.configPath.textContent = payload.path;
   els.rawEditor.value = state.raw;
   render();
@@ -157,6 +167,35 @@ function selectField(label, value, options, oninput, config = {}) {
   return div;
 }
 
+function datalistField(label, value, options, oninput, config = {}) {
+  const div = document.createElement('div');
+  div.className = 'field';
+  div.appendChild(createLabel(label, config.tooltip || ''));
+  const input = document.createElement('input');
+  const listId = `datalist-${Math.random().toString(36).slice(2)}`;
+  input.setAttribute('list', listId);
+  input.value = value ?? '';
+  input.oninput = (e) => oninput(e.target.value);
+  div.appendChild(input);
+
+  const datalist = document.createElement('datalist');
+  datalist.id = listId;
+  (options || []).forEach((optionValue) => {
+    const option = document.createElement('option');
+    option.value = optionValue;
+    datalist.appendChild(option);
+  });
+  div.appendChild(datalist);
+
+  if (config.selectHelp) {
+    const help = document.createElement('div');
+    help.className = 'select-help';
+    help.textContent = config.selectHelp;
+    div.appendChild(help);
+  }
+  return div;
+}
+
 function textareaField(label, value, oninput, helpText = '', tooltip = '') {
   const div = document.createElement('div');
   div.className = 'field';
@@ -217,6 +256,18 @@ function denormalizeOverrideEntries(entries) {
   return result;
 }
 
+function getUpstreamNames() {
+  return [''].concat((state.data.upstreams || []).map((item) => item.name || '').filter(Boolean));
+}
+
+function getTestKey(item, index) {
+  return item.name || `__index_${index}`;
+}
+
+function getUpstreamModels(upstreamName) {
+  return state.upstreamTests[upstreamName]?.model_ids || [];
+}
+
 function renderFormMode() {
   els.formMode.innerHTML = '';
   els.formMode.append(
@@ -225,6 +276,7 @@ function renderFormMode() {
     renderRoutingSection(),
     renderOverridesSection(),
     renderAliasesSection(),
+    renderModelsPreviewSection(),
   );
 }
 
@@ -258,6 +310,53 @@ function renderBasicSection() {
   return section;
 }
 
+async function testUpstream(item, index) {
+  const key = getTestKey(item, index);
+  state.upstreamTests[key] = { loading: true, model_ids: state.upstreamTests[key]?.model_ids || [] };
+  render();
+  try {
+    const payload = await requestJson('/api/ui/upstream/test', {
+      method: 'POST',
+      body: JSON.stringify({ upstream: item }),
+    });
+    state.upstreamTests[key] = payload;
+    if (item.name && key !== item.name) {
+      state.upstreamTests[item.name] = payload;
+      delete state.upstreamTests[key];
+    }
+    setStatus(`upstream ${item.name || index + 1} 测试完成`, payload.ok ? 'ok' : 'error');
+  } catch (err) {
+    state.upstreamTests[key] = { ok: false, error: err.message, model_ids: [] };
+    setStatus(`upstream 测试失败：${err.message}`, 'error');
+  }
+  render();
+}
+
+function renderUpstreamTestResult(item, index) {
+  const key = getTestKey(item, index);
+  const result = state.upstreamTests[item.name] || state.upstreamTests[key];
+  const box = document.createElement('div');
+  box.className = 'test-result muted';
+  if (!result) {
+    box.textContent = '还没测试。点“测试连接 / 获取模型”后，这里会显示该 upstream 的 models 列表。';
+    return box;
+  }
+  if (result.loading) {
+    box.textContent = '正在测试 upstream...';
+    return box;
+  }
+  box.className = `test-result ${result.ok ? 'ok' : 'error'}`;
+  const lines = [];
+  lines.push(result.ok ? `测试成功${result.status_code ? `（${result.status_code}）` : ''}` : `测试失败${result.status_code ? `（${result.status_code}）` : ''}`);
+  if (result.error) lines.push(result.error);
+  if (result.ok) {
+    lines.push(`发现 ${result.model_ids?.length || 0} 个模型`);
+    if (result.model_ids?.length) lines.push(result.model_ids.join('\n'));
+  }
+  box.textContent = lines.join('\n');
+  return box;
+}
+
 function renderUpstreamsSection() {
   const section = wrapSection('Upstreams');
   const list = state.data.upstreams || (state.data.upstreams = []);
@@ -268,11 +367,17 @@ function renderUpstreamsSection() {
     const head = document.createElement('div');
     head.className = 'card-head';
     head.innerHTML = `<strong>${item.name || `Upstream ${index + 1}`}</strong>`;
+    const actions = document.createElement('div');
+    actions.className = 'row-actions';
+    const testBtn = document.createElement('button');
+    testBtn.textContent = '测试连接 / 获取模型';
+    testBtn.onclick = () => testUpstream(item, index);
     const del = document.createElement('button');
     del.className = 'danger';
     del.textContent = '删除';
     del.onclick = () => { list.splice(index, 1); render(); };
-    head.appendChild(del);
+    actions.append(testBtn, del);
+    head.appendChild(actions);
     card.appendChild(head);
 
     const grid = document.createElement('div');
@@ -287,6 +392,7 @@ function renderUpstreamsSection() {
       textareaField('Headers(JSON)', jsonText(item.headers || {}), (v) => { item.headers = safeJsonParse(v, {}); }, '这里填 JSON 对象，比如 {"Authorization":"Bearer xxx"}', HELP.headers),
     );
     card.appendChild(grid);
+    card.appendChild(renderUpstreamTestResult(item, index));
     section.appendChild(card);
   });
 
@@ -303,7 +409,7 @@ function renderUpstreamsSection() {
 function renderRoutingSection() {
   const section = wrapSection('Routing');
   const routing = state.data.routing || (state.data.routing = { default_upstream: '', path_rules: {} });
-  const upstreamNames = [''].concat((state.data.upstreams || []).map((item) => item.name || '').filter(Boolean));
+  const upstreamNames = getUpstreamNames();
   const grid = document.createElement('div');
   grid.className = 'grid';
   grid.append(selectField('默认 Upstream', routing.default_upstream || '', upstreamNames, (v) => { routing.default_upstream = v; }, { selectHelp: SELECT_HELP.defaultUpstream }));
@@ -421,7 +527,7 @@ function renderOverridesSection() {
 function renderAliasesSection() {
   const section = wrapSection('Aliases');
   const list = state.data.aliases || (state.data.aliases = []);
-  const upstreamNames = [''].concat((state.data.upstreams || []).map((item) => item.name || '').filter(Boolean));
+  const upstreamNames = getUpstreamNames();
 
   list.forEach((item, index) => {
     const card = document.createElement('div');
@@ -436,12 +542,16 @@ function renderAliasesSection() {
     head.appendChild(del);
     card.appendChild(head);
 
+    const modelOptions = getUpstreamModels(item.upstream);
     const baseGrid = document.createElement('div');
     baseGrid.className = 'grid';
     baseGrid.append(
       textField('Alias 名', item.name || '', (v) => { item.name = v; }, 'text', { tooltip: HELP.alias_name }),
-      selectField('目标 Upstream', item.upstream || '', upstreamNames, (v) => { item.upstream = v; }, { selectHelp: SELECT_HELP.targetUpstream }),
-      textField('Target Model', item.target_model || '', (v) => { item.target_model = v; }, 'text', { tooltip: HELP.target_model }),
+      selectField('目标 Upstream', item.upstream || '', upstreamNames, (v) => { item.upstream = v; render(); }, { selectHelp: SELECT_HELP.targetUpstream }),
+      datalistField('Target Model', item.target_model || '', modelOptions, (v) => { item.target_model = v; }, {
+        tooltip: HELP.target_model,
+        selectHelp: modelOptions.length ? `可选模型 ${modelOptions.length} 个，也可以继续手动输入。` : '还没有该 upstream 的模型候选。先去上面的 upstream 点测试，或者直接手填。',
+      }),
     );
     card.appendChild(baseGrid);
 
@@ -519,15 +629,107 @@ function renderAliasesSection() {
   return section;
 }
 
+async function previewModels() {
+  try {
+    setStatus('正在预览最终 /v1/models ...', 'ok');
+    state.preview = { loading: true };
+    render();
+    const payload = await requestJson('/api/ui/models/preview', {
+      method: 'POST',
+      body: JSON.stringify({ data: state.data }),
+    });
+    state.preview = payload;
+    render();
+    setStatus('模型预览已更新', 'ok');
+  } catch (err) {
+    state.preview = { ok: false, error: err.message, items: [] };
+    render();
+    setStatus(`模型预览失败：${err.message}`, 'error');
+  }
+}
+
+function renderModelsPreviewSection() {
+  const section = wrapSection('对外 /v1/models 预览');
+  const actions = document.createElement('div');
+  actions.className = 'row-actions';
+  const previewBtn = document.createElement('button');
+  previewBtn.textContent = '预览最终模型列表';
+  previewBtn.onclick = previewModels;
+  actions.appendChild(previewBtn);
+  section.appendChild(actions);
+
+  const preview = state.preview;
+  const box = document.createElement('div');
+  if (!preview) {
+    box.className = 'test-result muted';
+    box.textContent = '还没生成预览。点上面的按钮后，这里会显示 wrapper 最终对外暴露的模型列表。';
+    section.appendChild(box);
+    return section;
+  }
+  if (preview.loading) {
+    box.className = 'test-result muted';
+    box.textContent = '正在生成预览...';
+    section.appendChild(box);
+    return section;
+  }
+  if (!preview.ok) {
+    box.className = 'test-result error';
+    box.textContent = preview.error || '预览失败';
+    section.appendChild(box);
+    return section;
+  }
+
+  const summary = document.createElement('div');
+  summary.className = 'test-result ok';
+  summary.textContent = `最终将对外暴露 ${preview.items?.length || 0} 个模型`;
+  section.appendChild(summary);
+
+  const tableWrap = document.createElement('div');
+  tableWrap.className = 'table-wrap';
+  const table = document.createElement('table');
+  table.className = 'preview-table';
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  ['模型名', '来源', 'Upstream', 'Target Model'].forEach((text) => {
+    const th = document.createElement('th');
+    th.textContent = text;
+    headRow.appendChild(th);
+  });
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  (preview.items || []).forEach((item) => {
+    const tr = document.createElement('tr');
+    [item.id || '', item.source || '', item.upstream || '-', item.target_model || '-'].forEach((text) => {
+      const td = document.createElement('td');
+      td.textContent = text;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  tableWrap.appendChild(table);
+  section.appendChild(tableWrap);
+
+  const raw = document.createElement('details');
+  const summaryEl = document.createElement('summary');
+  summaryEl.textContent = '查看原始 models payload';
+  raw.appendChild(summaryEl);
+  const pre = document.createElement('pre');
+  pre.className = 'raw-preview';
+  pre.textContent = JSON.stringify(preview.models_payload || {}, null, 2);
+  raw.appendChild(pre);
+  section.appendChild(raw);
+  return section;
+}
+
 async function saveConfig() {
   try {
     setStatus('正在保存配置...', 'ok');
-    const body = state.mode === 'raw'
-      ? { mode: 'raw', raw: els.rawEditor.value }
-      : { mode: 'form', data: state.data };
     const payload = await requestJson('/api/ui/config', {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: JSON.stringify(formPayload()),
     });
     state.path = payload.path;
     state.raw = payload.raw;
@@ -536,6 +738,9 @@ async function saveConfig() {
     els.rawEditor.value = state.raw;
     render();
     setStatus('保存成功', 'ok');
+    if (state.mode === 'form') {
+      await previewModels();
+    }
   } catch (err) {
     setStatus(`保存失败：${err.message}`, 'error');
   }

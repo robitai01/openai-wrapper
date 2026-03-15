@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.config import AppConfig
-from app.services.upstream import UpstreamService
+from app.services.upstream_models import UpstreamModelsService
 
 
 @dataclass
@@ -24,46 +24,46 @@ class ModelRegistry:
         self.config = config
         self._snapshot = None
 
-    async def get_snapshot(self) -> ModelsSnapshot:
+    @staticmethod
+    async def build_snapshot_from_config(config: AppConfig) -> ModelsSnapshot:
         now = time.time()
-        if self._snapshot and self._snapshot.expires_at > now:
-            return self._snapshot
-
         merged: list[dict[str, Any]] = []
         model_to_upstream: dict[str, str] = {}
         seen: set[str] = set()
 
-        for upstream_name, upstream in self.config.upstreams.items():
+        for upstream_name, upstream in config.upstreams.items():
             if not upstream.enabled:
                 continue
-            url = upstream.base_url.rstrip("/") + upstream.models_path
-            headers = UpstreamService.build_headers({}, upstream)
-            try:
-                response = await UpstreamService.request_json("GET", url, headers, timeout=upstream.timeout)
-                response.raise_for_status()
-                data = response.json()
-                for item in data.get("data", []):
-                    model_id = item.get("id")
-                    if not model_id or model_id in seen:
-                        continue
-                    seen.add(model_id)
-                    merged.append(item)
-                    model_to_upstream[model_id] = upstream_name
-            except Exception:
-                continue
+            probe = await UpstreamModelsService.probe(upstream)
+            payload = probe.raw_models_payload or {}
+            for item in payload.get("data", []):
+                if not isinstance(item, dict):
+                    continue
+                model_id = item.get("id")
+                if not model_id or model_id in seen:
+                    continue
+                seen.add(model_id)
+                merged.append(item)
+                model_to_upstream[model_id] = upstream_name
 
-        for alias_name in self.config.aliases:
+        for alias_name in config.aliases:
             if alias_name in seen:
                 continue
             merged.append({"id": alias_name, "object": "model", "owned_by": "wrapper", "permission": []})
             seen.add(alias_name)
 
         payload = {"object": "list", "data": merged}
-        snapshot = ModelsSnapshot(
-            expires_at=now + self.config.models_cache_ttl_seconds,
+        return ModelsSnapshot(
+            expires_at=now + config.models_cache_ttl_seconds,
             models_payload=payload,
             model_to_upstream=model_to_upstream,
         )
+
+    async def get_snapshot(self) -> ModelsSnapshot:
+        now = time.time()
+        if self._snapshot and self._snapshot.expires_at > now:
+            return self._snapshot
+        snapshot = await self.build_snapshot_from_config(self.config)
         self._snapshot = snapshot
         return snapshot
 

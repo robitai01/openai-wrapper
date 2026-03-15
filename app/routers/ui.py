@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import errno
-import json
 import os
 from pathlib import Path
 from typing import Any, Literal
@@ -12,9 +11,11 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
-from app.config import DEFAULT_CONFIG_PATH, load_config
+from app.config import DEFAULT_CONFIG_PATH, AppConfig, UpstreamConfig, load_config
 from app.routers.chat import model_registry as chat_model_registry
 from app.routers.models import model_registry as models_model_registry
+from app.services.model_registry import ModelRegistry
+from app.services.upstream_models import UpstreamModelsService
 
 router = APIRouter()
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,6 +34,14 @@ class ConfigLoadResponse(BaseModel):
     raw: str
     data: dict[str, Any]
     meta: dict[str, Any] = Field(default_factory=dict)
+
+
+class UpstreamProbeRequest(BaseModel):
+    upstream: dict[str, Any]
+
+
+class ModelsPreviewRequest(BaseModel):
+    data: dict[str, Any] | None = None
 
 
 @router.get("/ui", response_class=HTMLResponse)
@@ -72,6 +81,66 @@ async def save_ui_config(request_body: ConfigSaveRequest):
 
     payload = build_payload_from_disk()
     return JSONResponse({"ok": True, "message": "Config saved successfully", **payload})
+
+
+@router.post("/api/ui/upstream/test")
+async def test_upstream(request_body: UpstreamProbeRequest):
+    try:
+        upstream = UpstreamConfig.model_validate(request_body.upstream)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid upstream config: {exc}") from exc
+    result = await UpstreamModelsService.probe(upstream)
+    return JSONResponse(result.model_dump())
+
+
+@router.post("/api/ui/models/preview")
+async def preview_models(request_body: ModelsPreviewRequest):
+    try:
+        if request_body.data is None:
+            config = load_config()
+        else:
+            config_dict = merge_form_data({}, request_body.data)
+            validate_config_dict(config_dict)
+            config = AppConfig.model_validate(config_dict)
+        snapshot = await ModelRegistry.build_snapshot_from_config(config)
+        items: list[dict[str, Any]] = []
+        for item in snapshot.models_payload.get("data", []):
+            if not isinstance(item, dict):
+                continue
+            model_id = item.get("id")
+            if not isinstance(model_id, str) or not model_id:
+                continue
+            alias = config.aliases.get(model_id)
+            if alias:
+                items.append(
+                    {
+                        "id": model_id,
+                        "source": "alias",
+                        "upstream": alias.upstream,
+                        "target_model": alias.target_model,
+                    }
+                )
+            else:
+                items.append(
+                    {
+                        "id": model_id,
+                        "source": "upstream",
+                        "upstream": snapshot.model_to_upstream.get(model_id),
+                        "target_model": None,
+                    }
+                )
+        return JSONResponse(
+            {
+                "ok": True,
+                "models_payload": snapshot.models_payload,
+                "items": items,
+                "warnings": [],
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 def read_config_dict() -> dict[str, Any]:
@@ -196,15 +265,15 @@ def normalize_aliases(value: Any) -> dict[str, Any]:
 
 def validate_config_dict(data: dict[str, Any]) -> None:
     load_config.cache_clear()
-    from app.config import AppConfig
-
     AppConfig.model_validate(data)
+
 
 
 def save_config_dict(data: dict[str, Any]) -> None:
     validate_config_dict(data)
     raw = yaml.safe_dump(data, sort_keys=False, allow_unicode=True)
     save_config_raw(raw)
+
 
 
 def save_config_raw(raw: str) -> None:
@@ -221,6 +290,7 @@ def save_config_raw(raw: str) -> None:
         except Exception:
             pass
     refresh_runtime_config()
+
 
 
 def refresh_runtime_config() -> None:
