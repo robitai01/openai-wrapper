@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -12,6 +13,13 @@ from app.routers.proxy import router as proxy_router
 from app.routers.ui import BASE_DIR, router as ui_router
 
 app = FastAPI(title="OpenAI Wrapper", version="0.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 app.include_router(ui_router)
 app.include_router(chat_router)
