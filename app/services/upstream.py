@@ -20,6 +20,10 @@ HOP_BY_HOP_HEADERS = {
     "upgrade",
 }
 
+IGNORED_CLIENT_HEADERS = {
+    "authorization",
+}
+
 
 class UpstreamService:
     @staticmethod
@@ -28,6 +32,7 @@ class UpstreamService:
             key: value
             for key, value in incoming_headers.items()
             if key.lower() not in HOP_BY_HOP_HEADERS
+            and key.lower() not in IGNORED_CLIENT_HEADERS
         }
         headers.update(upstream.headers)
         if upstream.api_key:

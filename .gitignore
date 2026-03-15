@@ -35,3 +35,6 @@ logs/
 # Local config overrides
 .env
 config.yaml
+
+# Local planning docs
+plan/
