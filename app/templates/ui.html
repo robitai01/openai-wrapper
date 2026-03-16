@@ -6,18 +6,20 @@
   <title>OpenAI Wrapper Config UI</title>
   <link rel="stylesheet" href="/static/ui.css" />
 </head>
-<body>
+<body data-theme="light" data-locale="zh-CN">
   <div class="page">
     <header class="toolbar">
       <div>
-        <h1>OpenAI Wrapper Config UI</h1>
+        <h1 id="app-title">OpenAI Wrapper Config UI</h1>
         <div id="config-path" class="muted">Loading...</div>
       </div>
       <div class="toolbar-actions">
+        <select id="locale-select" class="toolbar-select" aria-label="Language"></select>
+        <button id="theme-toggle-btn" class="secondary">Dark</button>
         <button id="form-mode-btn" class="secondary">Form Mode</button>
         <button id="raw-mode-btn" class="secondary">Raw Mode</button>
-        <button id="reload-btn" class="secondary">重新加载</button>
-        <button id="save-btn" class="primary">保存配置</button>
+        <button id="reload-btn" class="secondary">Reload</button>
+        <button id="save-btn" class="primary">Save Config</button>
       </div>
     </header>
 
@@ -26,7 +28,7 @@
     <main>
       <section id="form-mode" class="panel"></section>
       <section id="raw-mode" class="panel hidden">
-        <label class="section-title" for="raw-editor">Raw YAML</label>
+        <label id="raw-editor-label" class="section-title" for="raw-editor">Raw YAML</label>
         <textarea id="raw-editor" spellcheck="false"></textarea>
       </section>
     </main>

@@ -9,6 +9,47 @@
   --danger: #dc2626;
   --success: #16a34a;
   --tooltip-bg: #111827;
+  --button-bg: #ffffff;
+  --button-text: #1f2937;
+  --button-danger-bg: #ffffff;
+  --button-danger-border: #fecaca;
+  --card-bg: #fbfdff;
+  --input-bg: #ffffff;
+  --input-text: #1f2937;
+  --table-bg: #ffffff;
+  --table-head-bg: #f8fafc;
+  --result-bg: #ffffff;
+  --result-success-bg: #f0fdf4;
+  --result-error-bg: #fef2f2;
+  --code-bg: #0f172a;
+  --code-text: #e5e7eb;
+}
+
+body[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b1220;
+  --panel: #111827;
+  --border: #334155;
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+  --primary: #3b82f6;
+  --danger: #f87171;
+  --success: #4ade80;
+  --tooltip-bg: #020617;
+  --button-bg: #0f172a;
+  --button-text: #e5e7eb;
+  --button-danger-bg: #1f1720;
+  --button-danger-border: #7f1d1d;
+  --card-bg: #0f172a;
+  --input-bg: #0f172a;
+  --input-text: #e5e7eb;
+  --table-bg: #0f172a;
+  --table-head-bg: #1e293b;
+  --result-bg: #0f172a;
+  --result-success-bg: #052e16;
+  --result-error-bg: #450a0a;
+  --code-bg: #020617;
+  --code-text: #e2e8f0;
 }
 
 * { box-sizing: border-box; }
@@ -36,11 +77,20 @@ body {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
+}
+.toolbar-select {
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--input-text);
+  border-radius: 8px;
+  padding: 7px 11px;
+  font-size: 13px;
 }
 button {
   border: 1px solid var(--border);
-  background: white;
-  color: var(--text);
+  background: var(--button-bg);
+  color: var(--button-text);
   border-radius: 8px;
   padding: 7px 11px;
   cursor: pointer;
@@ -52,9 +102,9 @@ button.primary {
   border-color: var(--primary);
 }
 button.danger {
-  background: white;
+  background: var(--button-danger-bg);
   color: var(--danger);
-  border-color: #fecaca;
+  border-color: var(--button-danger-border);
 }
 button.secondary.active {
   border-color: var(--primary);
@@ -67,8 +117,8 @@ button.secondary.active {
   padding: 14px;
   margin-bottom: 12px;
 }
-.status.ok { border-color: #bbf7d0; color: var(--success); }
-.status.error { border-color: #fecaca; color: var(--danger); }
+.status.ok { border-color: color-mix(in srgb, var(--success) 45%, var(--border)); color: var(--success); }
+.status.error { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); color: var(--danger); }
 .muted { color: var(--muted); }
 .hidden { display: none; }
 .section {
@@ -76,6 +126,7 @@ button.secondary.active {
   border-radius: 10px;
   padding: 12px;
   margin-bottom: 12px;
+  background: transparent;
 }
 .section-title {
   display: block;
@@ -99,11 +150,13 @@ button.secondary.active {
   border-radius: 8px;
   padding: 8px 10px;
   font: inherit;
-  background: white;
+  background: var(--input-bg);
+  color: var(--input-text);
 }
 .field input[type="checkbox"] {
   width: auto;
   transform: scale(0.95);
+  accent-color: var(--primary);
 }
 textarea {
   min-height: 130px;
@@ -114,13 +167,14 @@ textarea {
   border-radius: 10px;
   padding: 10px;
   margin-bottom: 10px;
-  background: #fbfdff;
+  background: var(--card-bg);
 }
 .card-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
+  gap: 12px;
 }
 .row-actions {
   display: flex;
@@ -135,17 +189,17 @@ textarea {
   padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--result-bg);
   white-space: pre-wrap;
   line-height: 1.5;
 }
 .test-result.ok {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
+  border-color: color-mix(in srgb, var(--success) 45%, var(--border));
+  background: var(--result-success-bg);
 }
 .test-result.error {
-  border-color: #fecaca;
-  background: #fef2f2;
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+  background: var(--result-error-bg);
   color: var(--danger);
 }
 .table-wrap {
@@ -155,7 +209,7 @@ textarea {
 .preview-table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
+  background: var(--table-bg);
 }
 .preview-table th,
 .preview-table td {
@@ -165,15 +219,15 @@ textarea {
   vertical-align: top;
 }
 .preview-table th {
-  background: #f8fafc;
+  background: var(--table-head-bg);
 }
 .raw-preview {
   margin-top: 8px;
   padding: 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
-  background: #0f172a;
-  color: #e5e7eb;
+  background: var(--code-bg);
+  color: var(--code-text);
   overflow-x: auto;
 }
 .label-row {
@@ -194,7 +248,7 @@ textarea {
   color: var(--muted);
   cursor: help;
   position: relative;
-  background: white;
+  background: var(--button-bg);
 }
 .help-icon::after {
   content: attr(data-tooltip);

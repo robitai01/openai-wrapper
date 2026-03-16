@@ -1,3 +1,239 @@
+const STORAGE_KEYS = {
+  theme: 'openai-wrapper.ui.theme',
+  locale: 'openai-wrapper.ui.locale',
+};
+
+const I18N = {
+  'zh-CN': {
+    appTitle: 'OpenAI Wrapper 配置界面',
+    loading: '加载中...',
+    formMode: '表单模式',
+    rawMode: '原始 YAML',
+    reload: '重新加载',
+    save: '保存配置',
+    themeLight: '切到浅色',
+    themeDark: '切到深色',
+    themeLightShort: '浅色',
+    themeDarkShort: '深色',
+    languageZh: '中文',
+    languageEn: 'English',
+    statusLoadingConfig: '正在加载配置...',
+    statusConfigLoaded: '配置已加载',
+    statusSavingConfig: '正在保存配置...',
+    statusSaveSuccess: '保存成功',
+    statusSaveFailed: '保存失败：{message}',
+    statusLoadFailed: '加载失败：{message}',
+    statusPreviewLoading: '正在预览最终 /v1/models ...',
+    statusPreviewUpdated: '模型预览已更新',
+    statusPreviewFailed: '模型预览失败：{message}',
+    statusUpstreamTestDone: 'upstream {name} 测试完成',
+    statusUpstreamTestFailed: 'upstream 测试失败：{message}',
+    selectPlaceholder: '请选择',
+    sectionBasic: '基础配置',
+    sectionUpstreams: '上游配置',
+    sectionRouting: '路由配置',
+    sectionGlobalOverrides: '全局覆盖 / Extra Body',
+    sectionAliases: '别名配置',
+    sectionPreview: '对外 /v1/models 预览',
+    sectionOverrides: '覆盖规则',
+    sectionExtraBody: '额外字段',
+    fieldHost: 'Host',
+    fieldPort: 'Port',
+    fieldModelsCacheTtl: '模型缓存 TTL（秒）',
+    fieldTruncatePromptChars: '截断日志字符数',
+    fieldLogFinalPayload: '打印最终 payload',
+    fieldLogHeaders: '打印 headers',
+    fieldName: '名称',
+    fieldBaseUrl: 'Base URL',
+    fieldApiKey: 'API Key',
+    fieldTimeout: '超时时间',
+    fieldModelsPath: '模型列表路径',
+    fieldEnabled: '启用',
+    fieldHeadersJson: '请求头 (JSON)',
+    fieldDefaultUpstream: '默认上游',
+    fieldPath: '路径',
+    fieldUpstream: '上游',
+    fieldParamName: '参数名',
+    fieldMode: '模式',
+    fieldValue: '值',
+    fieldExtraBodyJson: '额外字段 (JSON)',
+    fieldAliasName: '别名',
+    fieldTargetUpstream: '目标上游',
+    fieldTargetModel: '目标模型',
+    btnDelete: '删除',
+    btnAddUpstream: '新增 upstream',
+    btnTestUpstream: '测试连接 / 获取模型',
+    btnAddRouteRule: '新增路由规则',
+    btnDeleteRouteRule: '删除规则',
+    btnAddOverride: '新增 override',
+    btnDeleteOverride: '删除 override',
+    btnAddAlias: '新增 alias',
+    btnPreviewModels: '预览最终模型列表',
+    rawEditorLabel: '原始 YAML',
+    globalChatOverrides: 'global_chat_overrides',
+    globalExtraBody: 'global_extra_body',
+    noUpstreamTestYet: '还没测试。点“测试连接 / 获取模型”后，这里会显示该 upstream 的 models 列表。',
+    upstreamTesting: '正在测试 upstream...',
+    upstreamTestSuccess: '测试成功{status}',
+    upstreamTestFailed: '测试失败{status}',
+    upstreamModelsFound: '发现 {count} 个模型',
+    noModelOptionsYet: '还没有该 upstream 的模型候选。先去上面的 upstream 点测试，或者直接手填。',
+    modelOptionsReady: '可选模型 {count} 个，也可以继续手动输入。',
+    noPreviewYet: '还没生成预览。点上面的按钮后，这里会显示 wrapper 最终对外暴露的模型列表。',
+    previewGenerating: '正在生成预览...',
+    previewFailed: '预览失败',
+    previewSummary: '最终将对外暴露 {count} 个模型',
+    previewTableModel: '模型名',
+    previewTableSource: '来源',
+    previewTableUpstream: '上游',
+    previewTableTargetModel: '目标模型',
+    previewRawPayload: '查看原始 models payload',
+    sourceAlias: 'alias',
+    sourceUpstream: 'upstream',
+    unnamedUpstream: 'Upstream {index}',
+    unnamedAlias: 'Alias {index}',
+    dash: '-',
+    jsonHelpHeaders: '这里填 JSON 对象，比如 {"Authorization":"Bearer xxx"}',
+    jsonHelpGlobalExtraBody: '填 JSON 对象，例如 {"provider":{"cache":true}}',
+    jsonHelpProviderExtraBody: '填 JSON 对象，适合上游专属参数',
+    valueHelp: '支持 number / true / false / null / string',
+    helpHost: '服务监听地址。开发时一般用 0.0.0.0，表示允许局域网或容器访问。',
+    helpPort: '服务监听端口。默认 8000。',
+    helpTtl: '模型列表缓存时长，单位秒。值越大，请求 /v1/models 越少。',
+    helpTruncatePromptChars: '调试日志里 prompt 的截断长度，避免日志太长。',
+    helpBaseUrl: '上游模型服务地址，例如 http://host.docker.internal:11434 或 http://127.0.0.1:30003',
+    helpApiKey: '如果上游需要鉴权就在这里填，不需要可留空。',
+    helpTimeout: '请求该 upstream 的超时时间，单位秒。',
+    helpModelsPath: '用于拉取模型列表的接口路径，通常是 /v1/models。',
+    helpHeaders: '额外请求头，填 JSON 对象。适合放固定鉴权头或特殊上游要求的 header。',
+    helpUpstreamName: 'upstream 的唯一名字，routing 和 alias 都会引用它。',
+    helpAliasName: '对外暴露给客户端的模型别名。客户端请求这个名字时会映射到 target model。',
+    helpTargetModel: '实际转发给上游的模型名，例如 Qwen/Qwen3.5-27B-FP8。',
+    helpPathRule: '把特定 API 路径定向到某个 upstream，例如 /v1/embeddings。',
+    helpOverrideKey: '要覆盖的参数名，例如 temperature、top_p、top_k。',
+    helpOverrideValue: 'override 的值。支持数字、true/false、null、字符串。',
+    helpExtraBody: '附加到请求体中的额外字段，填 JSON 对象。适合 provider 专属参数。',
+    selectHelpOverrideMode: 'default：仅在用户没传该参数时补默认值；force：强制覆盖用户传值；remove：删除该参数。',
+    selectHelpDefaultUpstream: '当模型没命中 alias 或路径规则时，默认转发到这里。',
+    selectHelpTargetUpstream: 'alias 命中后，请求会转发到这里。',
+    selectHelpRouteUpstream: '这条 path rule 命中后，请求会转发到这里。',
+  },
+  en: {
+    appTitle: 'OpenAI Wrapper Config UI',
+    loading: 'Loading...',
+    formMode: 'Form Mode',
+    rawMode: 'Raw YAML',
+    reload: 'Reload',
+    save: 'Save Config',
+    themeLight: 'Switch to Light',
+    themeDark: 'Switch to Dark',
+    themeLightShort: 'Light',
+    themeDarkShort: 'Dark',
+    languageZh: '中文',
+    languageEn: 'English',
+    statusLoadingConfig: 'Loading config...',
+    statusConfigLoaded: 'Config loaded',
+    statusSavingConfig: 'Saving config...',
+    statusSaveSuccess: 'Saved successfully',
+    statusSaveFailed: 'Save failed: {message}',
+    statusLoadFailed: 'Load failed: {message}',
+    statusPreviewLoading: 'Previewing final /v1/models ...',
+    statusPreviewUpdated: 'Models preview updated',
+    statusPreviewFailed: 'Models preview failed: {message}',
+    statusUpstreamTestDone: 'Upstream {name} test finished',
+    statusUpstreamTestFailed: 'Upstream test failed: {message}',
+    selectPlaceholder: 'Please select',
+    sectionBasic: 'Basic Settings',
+    sectionUpstreams: 'Upstreams',
+    sectionRouting: 'Routing',
+    sectionGlobalOverrides: 'Global Overrides / Extra Body',
+    sectionAliases: 'Aliases',
+    sectionPreview: 'Public /v1/models Preview',
+    sectionOverrides: 'Overrides',
+    sectionExtraBody: 'Extra Body',
+    fieldHost: 'Host',
+    fieldPort: 'Port',
+    fieldModelsCacheTtl: 'Models Cache TTL (seconds)',
+    fieldTruncatePromptChars: 'Prompt Log Truncation',
+    fieldLogFinalPayload: 'Log final payload',
+    fieldLogHeaders: 'Log headers',
+    fieldName: 'Name',
+    fieldBaseUrl: 'Base URL',
+    fieldApiKey: 'API Key',
+    fieldTimeout: 'Timeout',
+    fieldModelsPath: 'Models Path',
+    fieldEnabled: 'Enabled',
+    fieldHeadersJson: 'Headers (JSON)',
+    fieldDefaultUpstream: 'Default Upstream',
+    fieldPath: 'Path',
+    fieldUpstream: 'Upstream',
+    fieldParamName: 'Parameter',
+    fieldMode: 'Mode',
+    fieldValue: 'Value',
+    fieldExtraBodyJson: 'Extra Body (JSON)',
+    fieldAliasName: 'Alias Name',
+    fieldTargetUpstream: 'Target Upstream',
+    fieldTargetModel: 'Target Model',
+    btnDelete: 'Delete',
+    btnAddUpstream: 'Add upstream',
+    btnTestUpstream: 'Test / Fetch Models',
+    btnAddRouteRule: 'Add route rule',
+    btnDeleteRouteRule: 'Delete rule',
+    btnAddOverride: 'Add override',
+    btnDeleteOverride: 'Delete override',
+    btnAddAlias: 'Add alias',
+    btnPreviewModels: 'Preview final model list',
+    rawEditorLabel: 'Raw YAML',
+    globalChatOverrides: 'global_chat_overrides',
+    globalExtraBody: 'global_extra_body',
+    noUpstreamTestYet: 'No test result yet. Click “Test / Fetch Models” to load the upstream model list here.',
+    upstreamTesting: 'Testing upstream...',
+    upstreamTestSuccess: 'Test succeeded{status}',
+    upstreamTestFailed: 'Test failed{status}',
+    upstreamModelsFound: 'Found {count} models',
+    noModelOptionsYet: 'No model options for this upstream yet. Test that upstream above first, or type manually.',
+    modelOptionsReady: '{count} model options available. You can still type manually.',
+    noPreviewYet: 'No preview yet. Click the button above to see which models the wrapper will expose publicly.',
+    previewGenerating: 'Generating preview...',
+    previewFailed: 'Preview failed',
+    previewSummary: 'The wrapper will expose {count} models',
+    previewTableModel: 'Model',
+    previewTableSource: 'Source',
+    previewTableUpstream: 'Upstream',
+    previewTableTargetModel: 'Target Model',
+    previewRawPayload: 'View raw models payload',
+    sourceAlias: 'alias',
+    sourceUpstream: 'upstream',
+    unnamedUpstream: 'Upstream {index}',
+    unnamedAlias: 'Alias {index}',
+    dash: '-',
+    jsonHelpHeaders: 'Enter a JSON object here, for example {"Authorization":"Bearer xxx"}.',
+    jsonHelpGlobalExtraBody: 'Enter a JSON object, for example {"provider":{"cache":true}}.',
+    jsonHelpProviderExtraBody: 'Enter a JSON object for provider-specific fields.',
+    valueHelp: 'Supports number / true / false / null / string',
+    helpHost: 'Server bind address. 0.0.0.0 is typical for local network or container access.',
+    helpPort: 'Server listen port. Default is 8000.',
+    helpTtl: 'Model list cache TTL in seconds. Higher values reduce /v1/models calls.',
+    helpTruncatePromptChars: 'Truncation length for prompts in debug logs to avoid huge log entries.',
+    helpBaseUrl: 'Upstream model service URL, such as http://host.docker.internal:11434 or http://127.0.0.1:30003',
+    helpApiKey: 'Set this if the upstream requires authentication. Leave empty otherwise.',
+    helpTimeout: 'Timeout in seconds when requesting this upstream.',
+    helpModelsPath: 'Endpoint path used to fetch the upstream model list, usually /v1/models.',
+    helpHeaders: 'Extra request headers as a JSON object. Useful for fixed auth headers or upstream-specific requirements.',
+    helpUpstreamName: 'Unique upstream name referenced by routing and aliases.',
+    helpAliasName: 'Public model alias exposed to clients. Requests using this name will map to the target model.',
+    helpTargetModel: 'Real model name forwarded to the upstream, for example Qwen/Qwen3.5-27B-FP8.',
+    helpPathRule: 'Route a specific API path to an upstream, for example /v1/embeddings.',
+    helpOverrideKey: 'Parameter name to override, such as temperature, top_p, or top_k.',
+    helpOverrideValue: 'Override value. Supports numbers, true/false, null, and strings.',
+    helpExtraBody: 'Extra fields merged into the request body as a JSON object. Useful for provider-specific parameters.',
+    selectHelpOverrideMode: 'default: fill only when the user did not send the field; force: always overwrite; remove: delete the field.',
+    selectHelpDefaultUpstream: 'Used when no alias or path rule matches the request.',
+    selectHelpTargetUpstream: 'Requests matching this alias will be sent to this upstream.',
+    selectHelpRouteUpstream: 'Requests matching this path rule will be sent to this upstream.',
+  },
+};
+
 const state = {
   mode: 'form',
   path: '',
@@ -6,45 +242,90 @@ const state = {
   meta: {},
   upstreamTests: {},
   preview: null,
+  ui: {
+    theme: loadStoredTheme(),
+    locale: loadStoredLocale(),
+  },
+  draftInputs: {},
 };
 
 const els = {
+  body: document.body,
+  appTitle: document.getElementById('app-title'),
   formMode: document.getElementById('form-mode'),
   rawMode: document.getElementById('raw-mode'),
   rawEditor: document.getElementById('raw-editor'),
+  rawEditorLabel: document.getElementById('raw-editor-label'),
   status: document.getElementById('status'),
   configPath: document.getElementById('config-path'),
   formModeBtn: document.getElementById('form-mode-btn'),
   rawModeBtn: document.getElementById('raw-mode-btn'),
   reloadBtn: document.getElementById('reload-btn'),
   saveBtn: document.getElementById('save-btn'),
+  themeToggleBtn: document.getElementById('theme-toggle-btn'),
+  localeSelect: document.getElementById('locale-select'),
 };
 
-const HELP = {
-  host: '服务监听地址。开发时一般用 0.0.0.0，表示允许局域网或容器访问。',
-  port: '服务监听端口。默认 8000。',
-  ttl: '模型列表缓存时长，单位秒。值越大，请求 /v1/models 越少。',
-  truncate_prompt_chars: '调试日志里 prompt 的截断长度，避免日志太长。',
-  base_url: '上游模型服务地址，例如 http://host.docker.internal:11434 或 http://127.0.0.1:30003',
-  api_key: '如果上游需要鉴权就在这里填，不需要可留空。',
-  timeout: '请求该 upstream 的超时时间，单位秒。',
-  models_path: '用于拉取模型列表的接口路径，通常是 /v1/models。',
-  headers: '额外请求头，填 JSON 对象。适合放固定鉴权头或特殊上游要求的 header。',
-  upstream_name: 'upstream 的唯一名字，routing 和 alias 都会引用它。',
-  alias_name: '对外暴露给客户端的模型别名。客户端请求这个名字时会映射到 target model。',
-  target_model: '实际转发给上游的模型名，例如 Qwen/Qwen3.5-27B-FP8。',
-  path_rule: '把特定 API 路径定向到某个 upstream，例如 /v1/embeddings。',
-  override_key: '要覆盖的参数名，例如 temperature、top_p、top_k。',
-  override_value: 'override 的值。支持数字、true/false、null、字符串。',
-  extra_body: '附加到请求体中的额外字段，填 JSON 对象。适合 provider 专属参数。',
-};
+function safeStorageGet(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
 
-const SELECT_HELP = {
-  overrideMode: 'default：仅在用户没传该参数时补默认值；force：强制覆盖用户传值；remove：删除该参数。',
-  defaultUpstream: '当模型没命中 alias 或路径规则时，默认转发到这里。',
-  targetUpstream: 'alias 命中后，请求会转发到这里。',
-  routeUpstream: '这条 path rule 命中后，请求会转发到这里。',
-};
+function safeStorageSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // ignore storage failures; UI should still work without persistence
+  }
+}
+
+function loadStoredTheme() {
+  const stored = safeStorageGet(STORAGE_KEYS.theme);
+  return stored === 'dark' ? 'dark' : 'light';
+}
+
+function loadStoredLocale() {
+  const stored = safeStorageGet(STORAGE_KEYS.locale);
+  return stored === 'en' ? 'en' : 'zh-CN';
+}
+
+function t(key, vars = {}) {
+  const dict = I18N[state.ui.locale] || I18N['zh-CN'];
+  let text = dict[key] ?? I18N['zh-CN'][key] ?? key;
+  Object.entries(vars).forEach(([name, value]) => {
+    text = text.replaceAll(`{${name}}`, String(value));
+  });
+  return text;
+}
+
+function help(key) {
+  return t(key);
+}
+
+function applyUiPrefs() {
+  els.body.dataset.theme = state.ui.theme;
+  els.body.dataset.locale = state.ui.locale;
+  document.documentElement.lang = state.ui.locale;
+  els.appTitle.textContent = t('appTitle');
+  els.formModeBtn.textContent = t('formMode');
+  els.rawModeBtn.textContent = t('rawMode');
+  els.reloadBtn.textContent = t('reload');
+  els.saveBtn.textContent = t('save');
+  els.rawEditorLabel.textContent = t('rawEditorLabel');
+  els.themeToggleBtn.textContent = state.ui.theme === 'dark' ? t('themeLightShort') : t('themeDarkShort');
+  els.themeToggleBtn.setAttribute('aria-label', state.ui.theme === 'dark' ? t('themeLight') : t('themeDark'));
+  els.localeSelect.innerHTML = '';
+  [{ value: 'zh-CN', label: t('languageZh') }, { value: 'en', label: t('languageEn') }].forEach((item) => {
+    const option = document.createElement('option');
+    option.value = item.value;
+    option.textContent = item.label;
+    if (item.value === state.ui.locale) option.selected = true;
+    els.localeSelect.appendChild(option);
+  });
+}
 
 function setStatus(message, type = 'ok') {
   els.status.textContent = message;
@@ -70,7 +351,7 @@ function formPayload() {
 }
 
 async function loadConfig() {
-  setStatus('正在加载配置...', 'ok');
+  setStatus(t('statusLoadingConfig'), 'ok');
   const payload = await requestJson('/api/ui/config');
   state.path = payload.path;
   state.raw = payload.raw;
@@ -78,13 +359,15 @@ async function loadConfig() {
   state.meta = payload.meta || {};
   state.upstreamTests = {};
   state.preview = null;
+  state.draftInputs = {};
   els.configPath.textContent = payload.path;
   els.rawEditor.value = state.raw;
   render();
-  setStatus('配置已加载', 'ok');
+  setStatus(t('statusConfigLoaded'), 'ok');
 }
 
 function render() {
+  applyUiPrefs();
   els.formMode.classList.toggle('hidden', state.mode !== 'form');
   els.rawMode.classList.toggle('hidden', state.mode !== 'raw');
   els.formModeBtn.classList.toggle('active', state.mode === 'form');
@@ -152,17 +435,17 @@ function selectField(label, value, options, oninput, config = {}) {
   options.forEach((optionValue) => {
     const option = document.createElement('option');
     option.value = optionValue;
-    option.textContent = optionValue || '请选择';
+    option.textContent = optionValue || t('selectPlaceholder');
     if ((value ?? '') === optionValue) option.selected = true;
     select.appendChild(option);
   });
   select.onchange = (e) => oninput(e.target.value);
   div.appendChild(select);
   if (config.selectHelp) {
-    const help = document.createElement('div');
-    help.className = 'select-help';
-    help.textContent = config.selectHelp;
-    div.appendChild(help);
+    const helpText = document.createElement('div');
+    helpText.className = 'select-help';
+    helpText.textContent = config.selectHelp;
+    div.appendChild(helpText);
   }
   return div;
 }
@@ -188,15 +471,15 @@ function datalistField(label, value, options, oninput, config = {}) {
   div.appendChild(datalist);
 
   if (config.selectHelp) {
-    const help = document.createElement('div');
-    help.className = 'select-help';
-    help.textContent = config.selectHelp;
-    div.appendChild(help);
+    const helpText = document.createElement('div');
+    helpText.className = 'select-help';
+    helpText.textContent = config.selectHelp;
+    div.appendChild(helpText);
   }
   return div;
 }
 
-function textareaField(label, value, oninput, helpText = '', tooltip = '') {
+function textareaField(label, value, oninput, helpText = '', tooltip = '', options = {}) {
   const div = document.createElement('div');
   div.className = 'field';
   div.appendChild(createLabel(label, tooltip));
@@ -207,8 +490,15 @@ function textareaField(label, value, oninput, helpText = '', tooltip = '') {
     div.appendChild(small);
   }
   const ta = document.createElement('textarea');
-  ta.value = value ?? '';
-  ta.oninput = (e) => oninput(e.target.value);
+  if (options.draftKey && Object.prototype.hasOwnProperty.call(state.draftInputs, options.draftKey)) {
+    ta.value = state.draftInputs[options.draftKey];
+  } else {
+    ta.value = value ?? '';
+  }
+  ta.oninput = (e) => {
+    if (options.draftKey) state.draftInputs[options.draftKey] = e.target.value;
+    oninput(e.target.value);
+  };
   div.appendChild(ta);
   return div;
 }
@@ -291,18 +581,18 @@ function wrapSection(title) {
 }
 
 function renderBasicSection() {
-  const section = wrapSection('基础配置');
+  const section = wrapSection(t('sectionBasic'));
   const grid = document.createElement('div');
   grid.className = 'grid';
   const server = state.data.server || {};
   const debug = state.data.debug || {};
   grid.append(
-    textField('Host', server.host || '', (v) => { server.host = v; }, 'text', { tooltip: HELP.host }),
-    textField('Port', server.port ?? 8000, (v) => { server.port = Number(v || 0); }, 'number', { tooltip: HELP.port }),
-    textField('模型缓存 TTL（秒）', state.data.models_cache_ttl_seconds ?? 60, (v) => { state.data.models_cache_ttl_seconds = Number(v || 0); }, 'number', { tooltip: HELP.ttl }),
-    textField('截断日志字符数', debug.truncate_prompt_chars ?? 500, (v) => { debug.truncate_prompt_chars = Number(v || 0); }, 'number', { tooltip: HELP.truncate_prompt_chars }),
-    checkboxField('打印最终 payload', debug.log_final_payload, (v) => { debug.log_final_payload = v; }),
-    checkboxField('打印 headers', debug.log_headers, (v) => { debug.log_headers = v; }),
+    textField(t('fieldHost'), server.host || '', (v) => { server.host = v; }, 'text', { tooltip: help('helpHost') }),
+    textField(t('fieldPort'), server.port ?? 8000, (v) => { server.port = Number(v || 0); }, 'number', { tooltip: help('helpPort') }),
+    textField(t('fieldModelsCacheTtl'), state.data.models_cache_ttl_seconds ?? 60, (v) => { state.data.models_cache_ttl_seconds = Number(v || 0); }, 'number', { tooltip: help('helpTtl') }),
+    textField(t('fieldTruncatePromptChars'), debug.truncate_prompt_chars ?? 500, (v) => { debug.truncate_prompt_chars = Number(v || 0); }, 'number', { tooltip: help('helpTruncatePromptChars') }),
+    checkboxField(t('fieldLogFinalPayload'), debug.log_final_payload, (v) => { debug.log_final_payload = v; }),
+    checkboxField(t('fieldLogHeaders'), debug.log_headers, (v) => { debug.log_headers = v; }),
   );
   state.data.server = server;
   state.data.debug = debug;
@@ -324,10 +614,10 @@ async function testUpstream(item, index) {
       state.upstreamTests[item.name] = payload;
       delete state.upstreamTests[key];
     }
-    setStatus(`upstream ${item.name || index + 1} 测试完成`, payload.ok ? 'ok' : 'error');
+    setStatus(t('statusUpstreamTestDone', { name: item.name || index + 1 }), payload.ok ? 'ok' : 'error');
   } catch (err) {
     state.upstreamTests[key] = { ok: false, error: err.message, model_ids: [] };
-    setStatus(`upstream 测试失败：${err.message}`, 'error');
+    setStatus(t('statusUpstreamTestFailed', { message: err.message }), 'error');
   }
   render();
 }
@@ -338,19 +628,20 @@ function renderUpstreamTestResult(item, index) {
   const box = document.createElement('div');
   box.className = 'test-result muted';
   if (!result) {
-    box.textContent = '还没测试。点“测试连接 / 获取模型”后，这里会显示该 upstream 的 models 列表。';
+    box.textContent = t('noUpstreamTestYet');
     return box;
   }
   if (result.loading) {
-    box.textContent = '正在测试 upstream...';
+    box.textContent = t('upstreamTesting');
     return box;
   }
   box.className = `test-result ${result.ok ? 'ok' : 'error'}`;
   const lines = [];
-  lines.push(result.ok ? `测试成功${result.status_code ? `（${result.status_code}）` : ''}` : `测试失败${result.status_code ? `（${result.status_code}）` : ''}`);
+  const statusSuffix = result.status_code ? ` (${result.status_code})` : '';
+  lines.push(result.ok ? t('upstreamTestSuccess', { status: statusSuffix }) : t('upstreamTestFailed', { status: statusSuffix }));
   if (result.error) lines.push(result.error);
   if (result.ok) {
-    lines.push(`发现 ${result.model_ids?.length || 0} 个模型`);
+    lines.push(t('upstreamModelsFound', { count: result.model_ids?.length || 0 }));
     if (result.model_ids?.length) lines.push(result.model_ids.join('\n'));
   }
   box.textContent = lines.join('\n');
@@ -358,7 +649,7 @@ function renderUpstreamTestResult(item, index) {
 }
 
 function renderUpstreamsSection() {
-  const section = wrapSection('Upstreams');
+  const section = wrapSection(t('sectionUpstreams'));
   const list = state.data.upstreams || (state.data.upstreams = []);
 
   list.forEach((item, index) => {
@@ -366,15 +657,17 @@ function renderUpstreamsSection() {
     card.className = 'card';
     const head = document.createElement('div');
     head.className = 'card-head';
-    head.innerHTML = `<strong>${item.name || `Upstream ${index + 1}`}</strong>`;
+    const title = document.createElement('strong');
+    title.textContent = item.name || t('unnamedUpstream', { index: index + 1 });
+    head.appendChild(title);
     const actions = document.createElement('div');
     actions.className = 'row-actions';
     const testBtn = document.createElement('button');
-    testBtn.textContent = '测试连接 / 获取模型';
+    testBtn.textContent = t('btnTestUpstream');
     testBtn.onclick = () => testUpstream(item, index);
     const del = document.createElement('button');
     del.className = 'danger';
-    del.textContent = '删除';
+    del.textContent = t('btnDelete');
     del.onclick = () => { list.splice(index, 1); render(); };
     actions.append(testBtn, del);
     head.appendChild(actions);
@@ -383,13 +676,13 @@ function renderUpstreamsSection() {
     const grid = document.createElement('div');
     grid.className = 'grid';
     grid.append(
-      textField('名称', item.name || '', (v) => { item.name = v; }, 'text', { tooltip: HELP.upstream_name }),
-      textField('Base URL', item.base_url || '', (v) => { item.base_url = v; }, 'text', { tooltip: HELP.base_url }),
-      textField('API Key', item.api_key || '', (v) => { item.api_key = v; }, 'text', { tooltip: HELP.api_key }),
-      textField('Timeout', item.timeout ?? 120, (v) => { item.timeout = Number(v || 0); }, 'number', { tooltip: HELP.timeout }),
-      textField('Models Path', item.models_path || '/v1/models', (v) => { item.models_path = v; }, 'text', { tooltip: HELP.models_path }),
-      checkboxField('启用', item.enabled !== false, (v) => { item.enabled = v; }),
-      textareaField('Headers(JSON)', jsonText(item.headers || {}), (v) => { item.headers = safeJsonParse(v, {}); }, '这里填 JSON 对象，比如 {"Authorization":"Bearer xxx"}', HELP.headers),
+      textField(t('fieldName'), item.name || '', (v) => { item.name = v; }, 'text', { tooltip: help('helpUpstreamName') }),
+      textField(t('fieldBaseUrl'), item.base_url || '', (v) => { item.base_url = v; }, 'text', { tooltip: help('helpBaseUrl') }),
+      textField(t('fieldApiKey'), item.api_key || '', (v) => { item.api_key = v; }, 'text', { tooltip: help('helpApiKey') }),
+      textField(t('fieldTimeout'), item.timeout ?? 120, (v) => { item.timeout = Number(v || 0); }, 'number', { tooltip: help('helpTimeout') }),
+      textField(t('fieldModelsPath'), item.models_path || '/v1/models', (v) => { item.models_path = v; }, 'text', { tooltip: help('helpModelsPath') }),
+      checkboxField(t('fieldEnabled'), item.enabled !== false, (v) => { item.enabled = v; }),
+      textareaField(t('fieldHeadersJson'), jsonText(item.headers || {}), (v) => { item.headers = safeJsonParse(v, {}); }, t('jsonHelpHeaders'), help('helpHeaders'), { draftKey: `upstream:${index}:headers` }),
     );
     card.appendChild(grid);
     card.appendChild(renderUpstreamTestResult(item, index));
@@ -397,7 +690,7 @@ function renderUpstreamsSection() {
   });
 
   const addBtn = document.createElement('button');
-  addBtn.textContent = '新增 upstream';
+  addBtn.textContent = t('btnAddUpstream');
   addBtn.onclick = () => {
     list.push({ name: '', base_url: '', api_key: '', timeout: 120, enabled: true, models_path: '/v1/models', headers: {} });
     render();
@@ -407,12 +700,12 @@ function renderUpstreamsSection() {
 }
 
 function renderRoutingSection() {
-  const section = wrapSection('Routing');
+  const section = wrapSection(t('sectionRouting'));
   const routing = state.data.routing || (state.data.routing = { default_upstream: '', path_rules: {} });
   const upstreamNames = getUpstreamNames();
   const grid = document.createElement('div');
   grid.className = 'grid';
-  grid.append(selectField('默认 Upstream', routing.default_upstream || '', upstreamNames, (v) => { routing.default_upstream = v; }, { selectHelp: SELECT_HELP.defaultUpstream }));
+  grid.append(selectField(t('fieldDefaultUpstream'), routing.default_upstream || '', upstreamNames, (v) => { routing.default_upstream = v; }, { selectHelp: help('selectHelpDefaultUpstream') }));
   section.appendChild(grid);
 
   const rules = Object.entries(routing.path_rules || {});
@@ -423,19 +716,19 @@ function renderRoutingSection() {
     const ruleGrid = document.createElement('div');
     ruleGrid.className = 'grid';
     ruleGrid.append(
-      textField('Path', path, (v) => {
+      textField(t('fieldPath'), path, (v) => {
         nextRules[index][0] = v;
         routing.path_rules = Object.fromEntries(nextRules.filter(([p, u]) => p && u));
-      }, 'text', { tooltip: HELP.path_rule }),
-      selectField('Upstream', upstream, upstreamNames, (v) => {
+      }, 'text', { tooltip: help('helpPathRule') }),
+      selectField(t('fieldUpstream'), upstream, upstreamNames, (v) => {
         nextRules[index][1] = v;
         routing.path_rules = Object.fromEntries(nextRules.filter(([p, u]) => p && u));
-      }, { selectHelp: SELECT_HELP.routeUpstream })
+      }, { selectHelp: help('selectHelpRouteUpstream') })
     );
     card.appendChild(ruleGrid);
     const del = document.createElement('button');
     del.className = 'danger';
-    del.textContent = '删除规则';
+    del.textContent = t('btnDeleteRouteRule');
     del.onclick = () => {
       nextRules.splice(index, 1);
       routing.path_rules = Object.fromEntries(nextRules);
@@ -446,7 +739,7 @@ function renderRoutingSection() {
   });
 
   const addBtn = document.createElement('button');
-  addBtn.textContent = '新增路由规则';
+  addBtn.textContent = t('btnAddRouteRule');
   addBtn.onclick = () => {
     const nextRules = Object.entries(routing.path_rules || {});
     nextRules.push(['/v1/example', routing.default_upstream || '']);
@@ -458,7 +751,7 @@ function renderRoutingSection() {
 }
 
 function renderOverridesSection() {
-  const section = wrapSection('Global Overrides / Extra Body');
+  const section = wrapSection(t('sectionGlobalOverrides'));
   const overrides = state.data.global_chat_overrides || (state.data.global_chat_overrides = {});
   const overrideEntries = normalizeOverrideEntries(overrides);
 
@@ -466,7 +759,7 @@ function renderOverridesSection() {
   overridesWrap.className = 'section';
   const overridesTitle = document.createElement('div');
   overridesTitle.className = 'section-title';
-  overridesTitle.textContent = 'global_chat_overrides';
+  overridesTitle.textContent = t('globalChatOverrides');
   overridesWrap.appendChild(overridesTitle);
 
   overrideEntries.forEach((entry, index) => {
@@ -475,23 +768,23 @@ function renderOverridesSection() {
     const grid = document.createElement('div');
     grid.className = 'grid';
     grid.append(
-      textField('参数名', entry.key || '', (v) => {
+      textField(t('fieldParamName'), entry.key || '', (v) => {
         overrideEntries[index].key = v;
         state.data.global_chat_overrides = denormalizeOverrideEntries(overrideEntries);
-      }, 'text', { tooltip: HELP.override_key }),
-      selectField('Mode', entry.mode || 'default', ['default', 'force', 'remove'], (v) => {
+      }, 'text', { tooltip: help('helpOverrideKey') }),
+      selectField(t('fieldMode'), entry.mode || 'default', ['default', 'force', 'remove'], (v) => {
         overrideEntries[index].mode = v;
         state.data.global_chat_overrides = denormalizeOverrideEntries(overrideEntries);
-      }, { selectHelp: SELECT_HELP.overrideMode }),
-      textField('Value', entry.value ?? '', (v) => {
+      }, { selectHelp: help('selectHelpOverrideMode') }),
+      textField(t('fieldValue'), entry.value ?? '', (v) => {
         overrideEntries[index].value = v;
         state.data.global_chat_overrides = denormalizeOverrideEntries(overrideEntries);
-      }, 'text', { tooltip: HELP.override_value, helpText: '支持 number / true / false / null / string' })
+      }, 'text', { tooltip: help('helpOverrideValue'), helpText: t('valueHelp') })
     );
     card.appendChild(grid);
     const del = document.createElement('button');
     del.className = 'danger';
-    del.textContent = '删除 override';
+    del.textContent = t('btnDeleteOverride');
     del.onclick = () => {
       overrideEntries.splice(index, 1);
       state.data.global_chat_overrides = denormalizeOverrideEntries(overrideEntries);
@@ -502,7 +795,7 @@ function renderOverridesSection() {
   });
 
   const addOverrideBtn = document.createElement('button');
-  addOverrideBtn.textContent = '新增 override';
+  addOverrideBtn.textContent = t('btnAddOverride');
   addOverrideBtn.onclick = () => {
     overrideEntries.push({ key: '', mode: 'default', value: '' });
     state.data.global_chat_overrides = denormalizeOverrideEntries(overrideEntries);
@@ -514,10 +807,10 @@ function renderOverridesSection() {
   extraBodyWrap.className = 'section';
   const extraTitle = document.createElement('div');
   extraTitle.className = 'section-title';
-  extraTitle.textContent = 'global_extra_body';
+  extraTitle.textContent = t('globalExtraBody');
   extraBodyWrap.appendChild(extraTitle);
   extraBodyWrap.appendChild(
-    textareaField('Extra Body (JSON)', jsonText(state.data.global_extra_body || {}), (v) => { state.data.global_extra_body = safeJsonParse(v, {}); }, '填 JSON 对象，例如 {"provider":{"cache":true}}', HELP.extra_body)
+    textareaField(t('fieldExtraBodyJson'), jsonText(state.data.global_extra_body || {}), (v) => { state.data.global_extra_body = safeJsonParse(v, {}); }, t('jsonHelpGlobalExtraBody'), help('helpExtraBody'), { draftKey: 'global_extra_body' })
   );
 
   section.append(overridesWrap, extraBodyWrap);
@@ -525,7 +818,7 @@ function renderOverridesSection() {
 }
 
 function renderAliasesSection() {
-  const section = wrapSection('Aliases');
+  const section = wrapSection(t('sectionAliases'));
   const list = state.data.aliases || (state.data.aliases = []);
   const upstreamNames = getUpstreamNames();
 
@@ -534,10 +827,12 @@ function renderAliasesSection() {
     card.className = 'card';
     const head = document.createElement('div');
     head.className = 'card-head';
-    head.innerHTML = `<strong>${item.name || `Alias ${index + 1}`}</strong>`;
+    const title = document.createElement('strong');
+    title.textContent = item.name || t('unnamedAlias', { index: index + 1 });
+    head.appendChild(title);
     const del = document.createElement('button');
     del.className = 'danger';
-    del.textContent = '删除';
+    del.textContent = t('btnDelete');
     del.onclick = () => { list.splice(index, 1); render(); };
     head.appendChild(del);
     card.appendChild(head);
@@ -546,11 +841,11 @@ function renderAliasesSection() {
     const baseGrid = document.createElement('div');
     baseGrid.className = 'grid';
     baseGrid.append(
-      textField('Alias 名', item.name || '', (v) => { item.name = v; }, 'text', { tooltip: HELP.alias_name }),
-      selectField('目标 Upstream', item.upstream || '', upstreamNames, (v) => { item.upstream = v; render(); }, { selectHelp: SELECT_HELP.targetUpstream }),
-      datalistField('Target Model', item.target_model || '', modelOptions, (v) => { item.target_model = v; }, {
-        tooltip: HELP.target_model,
-        selectHelp: modelOptions.length ? `可选模型 ${modelOptions.length} 个，也可以继续手动输入。` : '还没有该 upstream 的模型候选。先去上面的 upstream 点测试，或者直接手填。',
+      textField(t('fieldAliasName'), item.name || '', (v) => { item.name = v; }, 'text', { tooltip: help('helpAliasName') }),
+      selectField(t('fieldTargetUpstream'), item.upstream || '', upstreamNames, (v) => { item.upstream = v; render(); }, { selectHelp: help('selectHelpTargetUpstream') }),
+      datalistField(t('fieldTargetModel'), item.target_model || '', modelOptions, (v) => { item.target_model = v; }, {
+        tooltip: help('helpTargetModel'),
+        selectHelp: modelOptions.length ? t('modelOptionsReady', { count: modelOptions.length }) : t('noModelOptionsYet'),
       }),
     );
     card.appendChild(baseGrid);
@@ -559,7 +854,7 @@ function renderAliasesSection() {
     overridesSection.className = 'section';
     const overridesTitle = document.createElement('div');
     overridesTitle.className = 'section-title';
-    overridesTitle.textContent = 'Overrides';
+    overridesTitle.textContent = t('sectionOverrides');
     overridesSection.appendChild(overridesTitle);
 
     const overrideEntries = normalizeOverrideEntries(item.overrides || {});
@@ -569,23 +864,23 @@ function renderAliasesSection() {
       const overrideGrid = document.createElement('div');
       overrideGrid.className = 'grid';
       overrideGrid.append(
-        textField('参数名', entry.key || '', (v) => {
+        textField(t('fieldParamName'), entry.key || '', (v) => {
           overrideEntries[overrideIndex].key = v;
           item.overrides = denormalizeOverrideEntries(overrideEntries);
-        }, 'text', { tooltip: HELP.override_key }),
-        selectField('Mode', entry.mode || 'default', ['default', 'force', 'remove'], (v) => {
+        }, 'text', { tooltip: help('helpOverrideKey') }),
+        selectField(t('fieldMode'), entry.mode || 'default', ['default', 'force', 'remove'], (v) => {
           overrideEntries[overrideIndex].mode = v;
           item.overrides = denormalizeOverrideEntries(overrideEntries);
-        }, { selectHelp: SELECT_HELP.overrideMode }),
-        textField('Value', entry.value ?? '', (v) => {
+        }, { selectHelp: help('selectHelpOverrideMode') }),
+        textField(t('fieldValue'), entry.value ?? '', (v) => {
           overrideEntries[overrideIndex].value = v;
           item.overrides = denormalizeOverrideEntries(overrideEntries);
-        }, 'text', { tooltip: HELP.override_value, helpText: '支持 number / true / false / null / string' })
+        }, 'text', { tooltip: help('helpOverrideValue'), helpText: t('valueHelp') })
       );
       overrideCard.appendChild(overrideGrid);
       const delOverride = document.createElement('button');
       delOverride.className = 'danger';
-      delOverride.textContent = '删除 override';
+      delOverride.textContent = t('btnDeleteOverride');
       delOverride.onclick = () => {
         overrideEntries.splice(overrideIndex, 1);
         item.overrides = denormalizeOverrideEntries(overrideEntries);
@@ -596,7 +891,7 @@ function renderAliasesSection() {
     });
 
     const addOverrideBtn = document.createElement('button');
-    addOverrideBtn.textContent = '新增 override';
+    addOverrideBtn.textContent = t('btnAddOverride');
     addOverrideBtn.onclick = () => {
       overrideEntries.push({ key: '', mode: 'default', value: '' });
       item.overrides = denormalizeOverrideEntries(overrideEntries);
@@ -609,10 +904,10 @@ function renderAliasesSection() {
     extraBodySection.className = 'section';
     const extraBodyTitle = document.createElement('div');
     extraBodyTitle.className = 'section-title';
-    extraBodyTitle.textContent = 'Extra Body';
+    extraBodyTitle.textContent = t('sectionExtraBody');
     extraBodySection.appendChild(extraBodyTitle);
     extraBodySection.appendChild(
-      textareaField('Extra Body (JSON)', jsonText(item.extra_body || {}), (v) => { item.extra_body = safeJsonParse(v, {}); }, '填 JSON 对象，适合 provider 专属参数', HELP.extra_body)
+      textareaField(t('fieldExtraBodyJson'), jsonText(item.extra_body || {}), (v) => { item.extra_body = safeJsonParse(v, {}); }, t('jsonHelpProviderExtraBody'), help('helpExtraBody'), { draftKey: `alias:${index}:extra_body` })
     );
     card.appendChild(extraBodySection);
 
@@ -620,7 +915,7 @@ function renderAliasesSection() {
   });
 
   const addBtn = document.createElement('button');
-  addBtn.textContent = '新增 alias';
+  addBtn.textContent = t('btnAddAlias');
   addBtn.onclick = () => {
     list.push({ name: '', upstream: '', target_model: '', overrides: {}, extra_body: {} });
     render();
@@ -631,7 +926,7 @@ function renderAliasesSection() {
 
 async function previewModels() {
   try {
-    setStatus('正在预览最终 /v1/models ...', 'ok');
+    setStatus(t('statusPreviewLoading'), 'ok');
     state.preview = { loading: true };
     render();
     const payload = await requestJson('/api/ui/models/preview', {
@@ -640,20 +935,20 @@ async function previewModels() {
     });
     state.preview = payload;
     render();
-    setStatus('模型预览已更新', 'ok');
+    setStatus(t('statusPreviewUpdated'), 'ok');
   } catch (err) {
     state.preview = { ok: false, error: err.message, items: [] };
     render();
-    setStatus(`模型预览失败：${err.message}`, 'error');
+    setStatus(t('statusPreviewFailed', { message: err.message }), 'error');
   }
 }
 
 function renderModelsPreviewSection() {
-  const section = wrapSection('对外 /v1/models 预览');
+  const section = wrapSection(t('sectionPreview'));
   const actions = document.createElement('div');
   actions.className = 'row-actions';
   const previewBtn = document.createElement('button');
-  previewBtn.textContent = '预览最终模型列表';
+  previewBtn.textContent = t('btnPreviewModels');
   previewBtn.onclick = previewModels;
   actions.appendChild(previewBtn);
   section.appendChild(actions);
@@ -662,26 +957,26 @@ function renderModelsPreviewSection() {
   const box = document.createElement('div');
   if (!preview) {
     box.className = 'test-result muted';
-    box.textContent = '还没生成预览。点上面的按钮后，这里会显示 wrapper 最终对外暴露的模型列表。';
+    box.textContent = t('noPreviewYet');
     section.appendChild(box);
     return section;
   }
   if (preview.loading) {
     box.className = 'test-result muted';
-    box.textContent = '正在生成预览...';
+    box.textContent = t('previewGenerating');
     section.appendChild(box);
     return section;
   }
   if (!preview.ok) {
     box.className = 'test-result error';
-    box.textContent = preview.error || '预览失败';
+    box.textContent = preview.error || t('previewFailed');
     section.appendChild(box);
     return section;
   }
 
   const summary = document.createElement('div');
   summary.className = 'test-result ok';
-  summary.textContent = `最终将对外暴露 ${preview.items?.length || 0} 个模型`;
+  summary.textContent = t('previewSummary', { count: preview.items?.length || 0 });
   section.appendChild(summary);
 
   const tableWrap = document.createElement('div');
@@ -690,7 +985,7 @@ function renderModelsPreviewSection() {
   table.className = 'preview-table';
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
-  ['模型名', '来源', 'Upstream', 'Target Model'].forEach((text) => {
+  [t('previewTableModel'), t('previewTableSource'), t('previewTableUpstream'), t('previewTableTargetModel')].forEach((text) => {
     const th = document.createElement('th');
     th.textContent = text;
     headRow.appendChild(th);
@@ -701,7 +996,8 @@ function renderModelsPreviewSection() {
   const tbody = document.createElement('tbody');
   (preview.items || []).forEach((item) => {
     const tr = document.createElement('tr');
-    [item.id || '', item.source || '', item.upstream || '-', item.target_model || '-'].forEach((text) => {
+    const sourceText = item.source === 'alias' ? t('sourceAlias') : t('sourceUpstream');
+    [item.id || '', sourceText, item.upstream || t('dash'), item.target_model || t('dash')].forEach((text) => {
       const td = document.createElement('td');
       td.textContent = text;
       tr.appendChild(td);
@@ -714,7 +1010,7 @@ function renderModelsPreviewSection() {
 
   const raw = document.createElement('details');
   const summaryEl = document.createElement('summary');
-  summaryEl.textContent = '查看原始 models payload';
+  summaryEl.textContent = t('previewRawPayload');
   raw.appendChild(summaryEl);
   const pre = document.createElement('pre');
   pre.className = 'raw-preview';
@@ -726,7 +1022,7 @@ function renderModelsPreviewSection() {
 
 async function saveConfig() {
   try {
-    setStatus('正在保存配置...', 'ok');
+    setStatus(t('statusSavingConfig'), 'ok');
     const payload = await requestJson('/api/ui/config', {
       method: 'POST',
       body: JSON.stringify(formPayload()),
@@ -737,20 +1033,35 @@ async function saveConfig() {
     state.meta = payload.meta || state.meta;
     els.rawEditor.value = state.raw;
     render();
-    setStatus('保存成功', 'ok');
+    setStatus(t('statusSaveSuccess'), 'ok');
     if (state.mode === 'form') {
       await previewModels();
     }
   } catch (err) {
-    setStatus(`保存失败：${err.message}`, 'error');
+    setStatus(t('statusSaveFailed', { message: err.message }), 'error');
   }
+}
+
+function setTheme(theme) {
+  state.ui.theme = theme === 'dark' ? 'dark' : 'light';
+  safeStorageSet(STORAGE_KEYS.theme, state.ui.theme);
+  render();
+}
+
+function setLocale(locale) {
+  state.ui.locale = locale === 'en' ? 'en' : 'zh-CN';
+  safeStorageSet(STORAGE_KEYS.locale, state.ui.locale);
+  render();
 }
 
 els.formModeBtn.onclick = () => { state.mode = 'form'; render(); };
 els.rawModeBtn.onclick = () => { state.mode = 'raw'; render(); };
 els.reloadBtn.onclick = async () => {
-  try { await loadConfig(); } catch (err) { setStatus(`加载失败：${err.message}`, 'error'); }
+  try { await loadConfig(); } catch (err) { setStatus(t('statusLoadFailed', { message: err.message }), 'error'); }
 };
 els.saveBtn.onclick = saveConfig;
+els.themeToggleBtn.onclick = () => setTheme(state.ui.theme === 'dark' ? 'light' : 'dark');
+els.localeSelect.onchange = (e) => setLocale(e.target.value);
 
-loadConfig().catch((err) => setStatus(`加载失败：${err.message}`, 'error'));
+applyUiPrefs();
+loadConfig().catch((err) => setStatus(t('statusLoadFailed', { message: err.message }), 'error'));
