@@ -199,7 +199,7 @@ def merge_form_data(original: dict[str, Any], form: dict[str, Any]) -> dict[str,
     merged["global_extra_body"] = ensure_dict(form.get("global_extra_body"))
     merged["aliases"] = normalize_aliases(form.get("aliases"))
     merged["models_cache_ttl_seconds"] = int(form.get("models_cache_ttl_seconds", 60) or 60)
-    return merged
+    return clean_empty_dicts(merged)
 
 
 def ensure_dict(value: Any) -> dict[str, Any]:
@@ -246,6 +246,33 @@ def normalize_upstreams(value: Any) -> dict[str, Any]:
     return result
 
 
+def clean_empty_dicts(value: Any) -> Any:
+    if isinstance(value, dict):
+        cleaned: dict[str, Any] = {}
+        for key, item in value.items():
+            cleaned_item = clean_empty_dicts(item)
+            if isinstance(cleaned_item, dict):
+                if cleaned_item:
+                    cleaned[key] = cleaned_item
+            elif isinstance(cleaned_item, list):
+                if cleaned_item:
+                    cleaned[key] = cleaned_item
+            else:
+                cleaned[key] = cleaned_item
+        return cleaned
+    if isinstance(value, list):
+        cleaned_list = []
+        for item in value:
+            cleaned_item = clean_empty_dicts(item)
+            if isinstance(cleaned_item, dict) and not cleaned_item:
+                continue
+            if isinstance(cleaned_item, list) and not cleaned_item:
+                continue
+            cleaned_list.append(cleaned_item)
+        return cleaned_list
+    return value
+
+
 def normalize_aliases(value: Any) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for item in value or []:
@@ -259,7 +286,7 @@ def normalize_aliases(value: Any) -> dict[str, Any]:
         payload.setdefault("extra_body", {})
         payload["overrides"] = ensure_dict(payload.get("overrides"))
         payload["extra_body"] = ensure_dict(payload.get("extra_body"))
-        result[name] = payload
+        result[name] = clean_empty_dicts(payload)
     return result
 
 

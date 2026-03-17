@@ -345,9 +345,11 @@ async function requestJson(url, options = {}) {
 }
 
 function formPayload() {
-  return state.mode === 'raw'
-    ? { mode: 'raw', raw: els.rawEditor.value }
-    : { mode: 'form', data: state.data };
+  if (state.mode === 'raw') {
+    return { mode: 'raw', raw: els.rawEditor.value };
+  }
+  const data = buildSanitizedFormData();
+  return { mode: 'form', data };
 }
 
 async function loadConfig() {
@@ -533,17 +535,80 @@ function normalizeOverrideEntries(overrides) {
   }));
 }
 
-function denormalizeOverrideEntries(entries) {
+function denormalizeOverrideEntries(entries, options = {}) {
+  const { filterEmptyKeys = true } = options;
   const result = {};
   (entries || []).forEach((entry) => {
     const key = String(entry?.key || '').trim();
-    if (!key) return;
+    if (!key) {
+      if (filterEmptyKeys) return;
+      return;
+    }
+    const rawValue = entry?.value ?? '';
     result[key] = {
       mode: entry?.mode || 'default',
-      value: parseLooseValue(entry?.value ?? ''),
+      value: rawValue === '' ? null : parseLooseValue(rawValue),
     };
   });
   return result;
+}
+
+function getOverrideDraftKey(scope, index = null) {
+  return scope === 'global' ? 'overrides:global' : `overrides:alias:${index}`;
+}
+
+function getOverrideEntries(scope, currentOverrides, index = null) {
+  const draftKey = getOverrideDraftKey(scope, index);
+  if (!Object.prototype.hasOwnProperty.call(state.draftInputs, draftKey)) {
+    state.draftInputs[draftKey] = normalizeOverrideEntries(currentOverrides || {});
+  }
+  return state.draftInputs[draftKey];
+}
+
+function syncOverrideEntries(scope, target, index = null) {
+  const draftKey = getOverrideDraftKey(scope, index);
+  const entries = state.draftInputs[draftKey] || [];
+  const normalized = denormalizeOverrideEntries(entries, { filterEmptyKeys: true });
+  if (scope === 'global') {
+    state.data.global_chat_overrides = normalized;
+    return;
+  }
+  target.overrides = normalized;
+}
+
+function cleanEmptyEntries(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => cleanEmptyEntries(item))
+      .filter((item) => {
+        if (item === undefined) return false;
+        if (Array.isArray(item)) return item.length > 0;
+        if (item && typeof item === 'object') return Object.keys(item).length > 0;
+        return true;
+      });
+  }
+  if (value && typeof value === 'object') {
+    const result = {};
+    Object.entries(value).forEach(([key, item]) => {
+      const cleaned = cleanEmptyEntries(item);
+      if (cleaned === undefined) return;
+      if (Array.isArray(cleaned) && cleaned.length === 0) return;
+      if (cleaned && typeof cleaned === 'object' && Object.keys(cleaned).length === 0) return;
+      result[key] = cleaned;
+    });
+    return result;
+  }
+  return value;
+}
+
+function buildSanitizedFormData() {
+  const data = JSON.parse(JSON.stringify(state.data || {}));
+  data.global_chat_overrides = denormalizeOverrideEntries(getOverrideEntries('global', state.data.global_chat_overrides || {}), { filterEmptyKeys: true });
+  data.aliases = (data.aliases || []).map((alias, index) => ({
+    ...alias,
+    overrides: denormalizeOverrideEntries(getOverrideEntries('alias', state.data.aliases?.[index]?.overrides || {}, index), { filterEmptyKeys: true }),
+  }));
+  return cleanEmptyEntries(data);
 }
 
 function getUpstreamNames() {
@@ -753,7 +818,7 @@ function renderRoutingSection() {
 function renderOverridesSection() {
   const section = wrapSection(t('sectionGlobalOverrides'));
   const overrides = state.data.global_chat_overrides || (state.data.global_chat_overrides = {});
-  const overrideEntries = normalizeOverrideEntries(overrides);
+  const overrideEntries = getOverrideEntries('global', overrides);
 
   const overridesWrap = document.createElement('div');
   overridesWrap.className = 'section';
@@ -770,15 +835,15 @@ function renderOverridesSection() {
     grid.append(
       textField(t('fieldParamName'), entry.key || '', (v) => {
         overrideEntries[index].key = v;
-        state.data.global_chat_overrides = denormalizeOverrideEntries(overrideEntries);
+        syncOverrideEntries('global', state.data);
       }, 'text', { tooltip: help('helpOverrideKey') }),
       selectField(t('fieldMode'), entry.mode || 'default', ['default', 'force', 'remove'], (v) => {
         overrideEntries[index].mode = v;
-        state.data.global_chat_overrides = denormalizeOverrideEntries(overrideEntries);
+        syncOverrideEntries('global', state.data);
       }, { selectHelp: help('selectHelpOverrideMode') }),
       textField(t('fieldValue'), entry.value ?? '', (v) => {
         overrideEntries[index].value = v;
-        state.data.global_chat_overrides = denormalizeOverrideEntries(overrideEntries);
+        syncOverrideEntries('global', state.data);
       }, 'text', { tooltip: help('helpOverrideValue'), helpText: t('valueHelp') })
     );
     card.appendChild(grid);
@@ -787,7 +852,7 @@ function renderOverridesSection() {
     del.textContent = t('btnDeleteOverride');
     del.onclick = () => {
       overrideEntries.splice(index, 1);
-      state.data.global_chat_overrides = denormalizeOverrideEntries(overrideEntries);
+      syncOverrideEntries('global', state.data);
       render();
     };
     card.appendChild(del);
@@ -798,7 +863,6 @@ function renderOverridesSection() {
   addOverrideBtn.textContent = t('btnAddOverride');
   addOverrideBtn.onclick = () => {
     overrideEntries.push({ key: '', mode: 'default', value: '' });
-    state.data.global_chat_overrides = denormalizeOverrideEntries(overrideEntries);
     render();
   };
   overridesWrap.appendChild(addOverrideBtn);
@@ -857,7 +921,7 @@ function renderAliasesSection() {
     overridesTitle.textContent = t('sectionOverrides');
     overridesSection.appendChild(overridesTitle);
 
-    const overrideEntries = normalizeOverrideEntries(item.overrides || {});
+    const overrideEntries = getOverrideEntries('alias', item.overrides || {}, index);
     overrideEntries.forEach((entry, overrideIndex) => {
       const overrideCard = document.createElement('div');
       overrideCard.className = 'card';
@@ -866,15 +930,15 @@ function renderAliasesSection() {
       overrideGrid.append(
         textField(t('fieldParamName'), entry.key || '', (v) => {
           overrideEntries[overrideIndex].key = v;
-          item.overrides = denormalizeOverrideEntries(overrideEntries);
+          syncOverrideEntries('alias', item, index);
         }, 'text', { tooltip: help('helpOverrideKey') }),
         selectField(t('fieldMode'), entry.mode || 'default', ['default', 'force', 'remove'], (v) => {
           overrideEntries[overrideIndex].mode = v;
-          item.overrides = denormalizeOverrideEntries(overrideEntries);
+          syncOverrideEntries('alias', item, index);
         }, { selectHelp: help('selectHelpOverrideMode') }),
         textField(t('fieldValue'), entry.value ?? '', (v) => {
           overrideEntries[overrideIndex].value = v;
-          item.overrides = denormalizeOverrideEntries(overrideEntries);
+          syncOverrideEntries('alias', item, index);
         }, 'text', { tooltip: help('helpOverrideValue'), helpText: t('valueHelp') })
       );
       overrideCard.appendChild(overrideGrid);
@@ -883,7 +947,7 @@ function renderAliasesSection() {
       delOverride.textContent = t('btnDeleteOverride');
       delOverride.onclick = () => {
         overrideEntries.splice(overrideIndex, 1);
-        item.overrides = denormalizeOverrideEntries(overrideEntries);
+        syncOverrideEntries('alias', item, index);
         render();
       };
       overrideCard.appendChild(delOverride);
@@ -894,7 +958,6 @@ function renderAliasesSection() {
     addOverrideBtn.textContent = t('btnAddOverride');
     addOverrideBtn.onclick = () => {
       overrideEntries.push({ key: '', mode: 'default', value: '' });
-      item.overrides = denormalizeOverrideEntries(overrideEntries);
       render();
     };
     overridesSection.appendChild(addOverrideBtn);
