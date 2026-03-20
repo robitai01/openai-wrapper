@@ -31,7 +31,6 @@ class AliasConfig(BaseModel):
 
 class RoutingConfig(BaseModel):
     default_upstream: str
-    path_rules: dict[str, str] = Field(default_factory=dict)
 
 
 class ServerConfig(BaseModel):

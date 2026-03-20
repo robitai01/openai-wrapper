@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from app.config import DEFAULT_CONFIG_PATH, AppConfig, UpstreamConfig, load_config
 from app.routers.chat import model_registry as chat_model_registry
 from app.routers.models import model_registry as models_model_registry
+from app.routers.proxy import model_registry as proxy_model_registry
 from app.services.model_registry import ModelRegistry
 from app.services.upstream_models import UpstreamModelsService
 
@@ -180,7 +181,7 @@ def normalize_for_form(data: dict[str, Any]) -> dict[str, Any]:
     return {
         "server": data.get("server") or {},
         "debug": data.get("debug") or {},
-        "routing": data.get("routing") or {"default_upstream": "", "path_rules": {}},
+        "routing": data.get("routing") or {"default_upstream": ""},
         "upstreams": upstreams,
         "global_chat_overrides": data.get("global_chat_overrides") or {},
         "global_extra_body": data.get("global_extra_body") or {},
@@ -210,20 +211,8 @@ def ensure_dict(value: Any) -> dict[str, Any]:
 
 def normalize_routing(value: Any) -> dict[str, Any]:
     routing = ensure_dict(value)
-    path_rules = routing.get("path_rules") or {}
-    if isinstance(path_rules, list):
-        converted = {}
-        for item in path_rules:
-            if not isinstance(item, dict):
-                continue
-            path = str(item.get("path", "")).strip()
-            upstream = str(item.get("upstream", "")).strip()
-            if path and upstream:
-                converted[path] = upstream
-        path_rules = converted
     return {
         "default_upstream": str(routing.get("default_upstream", "")).strip(),
-        "path_rules": ensure_dict(path_rules),
     }
 
 
@@ -325,3 +314,4 @@ def refresh_runtime_config() -> None:
     config = load_config()
     chat_model_registry.refresh(config)
     models_model_registry.refresh(config)
+    proxy_model_registry.refresh(config)

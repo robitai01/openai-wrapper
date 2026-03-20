@@ -9,8 +9,6 @@ debug:
 
 routing:
   default_upstream: sglang_qwen3.5_27b
-  path_rules:
-    /v1/embeddings: sglang_qwen3.5_27b
 
 upstreams:
   ollama_local:

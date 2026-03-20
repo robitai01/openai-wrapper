@@ -51,7 +51,6 @@ const I18N = {
     fieldEnabled: '启用',
     fieldHeadersJson: '请求头 (JSON)',
     fieldDefaultUpstream: '默认上游',
-    fieldPath: '路径',
     fieldUpstream: '上游',
     fieldParamName: '参数名',
     fieldMode: '模式',
@@ -63,8 +62,6 @@ const I18N = {
     btnDelete: '删除',
     btnAddUpstream: '新增 upstream',
     btnTestUpstream: '测试连接 / 获取模型',
-    btnAddRouteRule: '新增路由规则',
-    btnDeleteRouteRule: '删除规则',
     btnAddOverride: '新增 override',
     btnDeleteOverride: '删除 override',
     btnAddAlias: '新增 alias',
@@ -109,14 +106,12 @@ const I18N = {
     helpUpstreamName: 'upstream 的唯一名字，routing 和 alias 都会引用它。',
     helpAliasName: '对外暴露给客户端的模型别名。客户端请求这个名字时会映射到 target model。',
     helpTargetModel: '实际转发给上游的模型名，例如 Qwen/Qwen3.5-27B-FP8。',
-    helpPathRule: '把特定 API 路径定向到某个 upstream，例如 /v1/embeddings。',
     helpOverrideKey: '要覆盖的参数名，例如 temperature、top_p、top_k。',
     helpOverrideValue: 'override 的值。支持数字、true/false、null、字符串。',
     helpExtraBody: '附加到请求体中的额外字段，填 JSON 对象。适合 provider 专属参数。',
     selectHelpOverrideMode: 'default：仅在用户没传该参数时补默认值；force：强制覆盖用户传值；remove：删除该参数。',
-    selectHelpDefaultUpstream: '当模型没命中 alias 或路径规则时，默认转发到这里。',
+    selectHelpDefaultUpstream: '当模型没命中 alias 时，默认转发到这里。',
     selectHelpTargetUpstream: 'alias 命中后，请求会转发到这里。',
-    selectHelpRouteUpstream: '这条 path rule 命中后，请求会转发到这里。',
   },
   en: {
     appTitle: 'OpenAI Wrapper Config UI',
@@ -165,7 +160,6 @@ const I18N = {
     fieldEnabled: 'Enabled',
     fieldHeadersJson: 'Headers (JSON)',
     fieldDefaultUpstream: 'Default Upstream',
-    fieldPath: 'Path',
     fieldUpstream: 'Upstream',
     fieldParamName: 'Parameter',
     fieldMode: 'Mode',
@@ -177,8 +171,6 @@ const I18N = {
     btnDelete: 'Delete',
     btnAddUpstream: 'Add upstream',
     btnTestUpstream: 'Test / Fetch Models',
-    btnAddRouteRule: 'Add route rule',
-    btnDeleteRouteRule: 'Delete rule',
     btnAddOverride: 'Add override',
     btnDeleteOverride: 'Delete override',
     btnAddAlias: 'Add alias',
@@ -223,14 +215,12 @@ const I18N = {
     helpUpstreamName: 'Unique upstream name referenced by routing and aliases.',
     helpAliasName: 'Public model alias exposed to clients. Requests using this name will map to the target model.',
     helpTargetModel: 'Real model name forwarded to the upstream, for example Qwen/Qwen3.5-27B-FP8.',
-    helpPathRule: 'Route a specific API path to an upstream, for example /v1/embeddings.',
     helpOverrideKey: 'Parameter name to override, such as temperature, top_p, or top_k.',
     helpOverrideValue: 'Override value. Supports numbers, true/false, null, and strings.',
     helpExtraBody: 'Extra fields merged into the request body as a JSON object. Useful for provider-specific parameters.',
     selectHelpOverrideMode: 'default: fill only when the user did not send the field; force: always overwrite; remove: delete the field.',
-    selectHelpDefaultUpstream: 'Used when no alias or path rule matches the request.',
+    selectHelpDefaultUpstream: 'Used when no alias matches the request.',
     selectHelpTargetUpstream: 'Requests matching this alias will be sent to this upstream.',
-    selectHelpRouteUpstream: 'Requests matching this path rule will be sent to this upstream.',
   },
 };
 
@@ -766,52 +756,12 @@ function renderUpstreamsSection() {
 
 function renderRoutingSection() {
   const section = wrapSection(t('sectionRouting'));
-  const routing = state.data.routing || (state.data.routing = { default_upstream: '', path_rules: {} });
+  const routing = state.data.routing || (state.data.routing = { default_upstream: '' });
   const upstreamNames = getUpstreamNames();
   const grid = document.createElement('div');
   grid.className = 'grid';
   grid.append(selectField(t('fieldDefaultUpstream'), routing.default_upstream || '', upstreamNames, (v) => { routing.default_upstream = v; }, { selectHelp: help('selectHelpDefaultUpstream') }));
   section.appendChild(grid);
-
-  const rules = Object.entries(routing.path_rules || {});
-  rules.forEach(([path, upstream], index) => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    const nextRules = Object.entries(routing.path_rules || {});
-    const ruleGrid = document.createElement('div');
-    ruleGrid.className = 'grid';
-    ruleGrid.append(
-      textField(t('fieldPath'), path, (v) => {
-        nextRules[index][0] = v;
-        routing.path_rules = Object.fromEntries(nextRules.filter(([p, u]) => p && u));
-      }, 'text', { tooltip: help('helpPathRule') }),
-      selectField(t('fieldUpstream'), upstream, upstreamNames, (v) => {
-        nextRules[index][1] = v;
-        routing.path_rules = Object.fromEntries(nextRules.filter(([p, u]) => p && u));
-      }, { selectHelp: help('selectHelpRouteUpstream') })
-    );
-    card.appendChild(ruleGrid);
-    const del = document.createElement('button');
-    del.className = 'danger';
-    del.textContent = t('btnDeleteRouteRule');
-    del.onclick = () => {
-      nextRules.splice(index, 1);
-      routing.path_rules = Object.fromEntries(nextRules);
-      render();
-    };
-    card.appendChild(del);
-    section.appendChild(card);
-  });
-
-  const addBtn = document.createElement('button');
-  addBtn.textContent = t('btnAddRouteRule');
-  addBtn.onclick = () => {
-    const nextRules = Object.entries(routing.path_rules || {});
-    nextRules.push(['/v1/example', routing.default_upstream || '']);
-    routing.path_rules = Object.fromEntries(nextRules);
-    render();
-  };
-  section.appendChild(addBtn);
   return section;
 }
 
